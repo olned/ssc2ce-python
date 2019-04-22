@@ -25,6 +25,7 @@ class Deribit(SessionWrapper):
     on_token = None
     on_subscription = None
     on_response_error = None
+    on_handle_response = None
 
     ws_api = 'wss://test.deribit.com/ws/api/v2/'
 
@@ -251,19 +252,26 @@ class Deribit(SessionWrapper):
             if "method" in data:
                 await self.handle_method_message(data)
             else:
-                response_id = data["id"]
-                if response_id:
-                    request = self.requests[response_id]
-
+                if "id" in data:
                     if "error" in data:
                         if self.on_response_error:
                             await self.on_response_error()
                         else:
                             logger.error(f"Receive error {repr(data)}")
                     else:
-                        await self.handle_response(request=request, response=data)
+                        response_id = data["id"]
+                        request = self.requests.get(response_id)
+                        if request:
+                            await self.handle_response(request=request, response=data)
 
-                    del self.requests[response_id]
+                            del self.requests[response_id]
+                        else:
+                            if self.on_handle_response:
+                                await self.on_handle_response(data)
+                            else:
+                                logger.warning(f"Unknown id:{response_id}, the on_handle_response event must be defined."
+                                               f" Unhandled message {data}")
+
                 else:
                     logger.warning(f"Unsupported message {message.data}")
         else:
