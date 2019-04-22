@@ -45,7 +45,9 @@ async def do_something_after_login():
         }
     })
 
-    await app.send_private(request={
+    await app.ws.send_json({
+        "jsonrpc": "2.0",
+        "id": "pseudo_id",
         "method": "private/enable_cancel_on_disconnect",
         "params": {}
     })
@@ -53,14 +55,8 @@ async def do_something_after_login():
     await app.send_private(request={
         "method": "public/subscribe",
         "params": {
-            "channels": [
-                "book.BTC-PERPETUAL.raw"
-            ]
-        }
+            "channels": ["quote.BTC-PERPETUAL"]}
     })
-
-
-"subscription"
 
 
 async def printer(**kwargs):
