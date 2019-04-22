@@ -23,6 +23,7 @@ class Deribit(SessionWrapper):
     on_message = None
     on_authenticated = None
     on_token = None
+    on_subscription = None
 
     ws_api = 'wss://test.deribit.com/ws/api/v2/'
 
@@ -55,6 +56,9 @@ class Deribit(SessionWrapper):
         self.client_secret = client_secret
         self.scope = scope
         self._timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=20)
+        self.method_routes = [
+            ("heartbeat", self.handle_heartbeat),
+        ]
 
     def get_request_id(self):
         self.request_id += 1
@@ -90,7 +94,7 @@ class Deribit(SessionWrapper):
             **request
         }
         self.requests[request_id] = request
-        logger.debug(f"sending:{repr(request)}")
+        logger.info(f"sending:{repr(request)}")
         await self.ws.send_json(request)
         return request_id
 
@@ -105,7 +109,7 @@ class Deribit(SessionWrapper):
             **request
         }
         self.requests[request_id] = request
-        logger.debug(f"sending:{repr(request)}")
+        logger.info(f"sending:{repr(request)}")
         await self.ws.send_json(request)
         return request_id
 
@@ -249,11 +253,7 @@ class Deribit(SessionWrapper):
             data = message.json()
             method = data.get("method")
             if method:
-                if method == "heartbeat":
-                    if data["params"]["type"] == "test_request":
-                        return await self.send_public({"method": "public/test", "params": {}})
-                else:
-                    logger.warning(f"Unsupported method {message.data}")
+                await self.handle_method_message(data)
             else:
                 response_id = data["id"]
                 if response_id:
@@ -271,6 +271,21 @@ class Deribit(SessionWrapper):
                     logger.warning(f"Unsupported message {message.data}")
         else:
             logger.warning(f"Unknown type of message {repr(message)}")
+
+    async def handle_method_message(self, data):
+        method = data["method"]
+
+        for key, handler in self.method_routes:
+            if method == key:
+                return await handler(data)
+
+        logger.warning(f"Unhandled message:{repr(data)}.")
+
+    async def handle_heartbeat(self, data):
+        if data["params"]["type"] == "test_request":
+            await self.send_public({"method": "public/test", "params": {}})
+
+        return
 
     async def handle_auth(self, request, response):
         self.auth_params = response["result"]
