@@ -10,4 +10,5 @@ setup(name='tcc-deribit',
       author_email='olned64@gmail.com',
       url='https://github.com/olned/ons-deribit-ws-python',
       packages=['deribit'],
+      install_requires=['aiohttp', ]
       )
