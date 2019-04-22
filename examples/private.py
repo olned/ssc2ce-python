@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from pprint import pprint
 
 from dotenv import load_dotenv
 from deribit.deribit import Deribit, AuthType
@@ -62,6 +63,10 @@ async def do_something_after_login():
 "subscription"
 
 
+async def printer(**kwargs):
+    pprint(kwargs)
+
+
 async def handle_subscription(data: dict):
     if data["params"]["channel"] == 'book.BTC-PERPETUAL.raw':
         return
@@ -87,7 +92,15 @@ app.on_connect_ws = start_credential
 app.on_message = app.handle_message
 app.on_authenticated = after_login
 app.on_token = on_token
-app.method_routes.append(("subscription", handle_subscription))
+app.method_routes += [
+    ("subscription", handle_subscription),
+]
+app.response_routes += [
+    ("public/subscribe", printer),
+    ("private/get_position", printer),
+    ("private/enable_cancel_on_disconnect", printer),
+    ("private/get_account_summary", printer),
+]
 
 loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
 
