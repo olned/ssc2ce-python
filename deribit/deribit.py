@@ -15,8 +15,15 @@ class AuthType(IntEnum):
     SIGNATURE = 3
 
 
+class IntId:
+    id = 0
+
+    def get_id(self):
+        self.id += 1
+        return self.id
+
+
 class Deribit(SessionWrapper):
-    request_id = 0
     ws: aiohttp.ClientWebSocketResponse = None
     on_connect_ws = None
     on_close_ws = None
@@ -39,8 +46,11 @@ class Deribit(SessionWrapper):
                  client_id: str = None,
                  client_secret: str = None,
                  scope: str = "session",
-                 auth_type: AuthType = AuthType.NONE):
+                 auth_type: AuthType = AuthType.NONE,
+                 get_id=IntId().get_id):
         super().__init__()
+
+        self.get_id = get_id
 
         if auth_type & (AuthType.CREDENTIALS | AuthType.SIGNATURE):
             if client_secret is None or client_id is None:
@@ -67,10 +77,6 @@ class Deribit(SessionWrapper):
             ("public/auth", self.handle_auth),
         ]
 
-    def get_request_id(self):
-        self.request_id += 1
-        return self.request_id
-
     async def run_receiver(self):
         self.ws = await self._session.ws_connect(self.ws_api)
         if self.on_connect_ws:
@@ -94,7 +100,7 @@ class Deribit(SessionWrapper):
                 await self.on_message(message)
 
     async def send_public(self, request):
-        request_id = self.get_request_id()
+        request_id = self.get_id()
         request = {
             "jsonrpc": "2.0",
             "id": request_id,
@@ -106,7 +112,7 @@ class Deribit(SessionWrapper):
         return request_id
 
     async def send_private(self, request):
-        request_id = self.get_request_id()
+        request_id = self.get_id()
         access_token = self.auth_params["access_token"]
         request["params"]["access_token"] = access_token
 
@@ -299,7 +305,6 @@ class Deribit(SessionWrapper):
         logger.warning(f"Unhandled message:{repr(data)}.")
 
     async def handle_heartbeat(self, data):
-        # Todo remove ?
         if data["params"]["type"] == "test_request":
             await self.send_public({"method": "public/test", "params": {}})
 
