@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+from uuid import uuid4
 
 from dotenv import load_dotenv
 from deribit.deribit import Deribit, AuthType
@@ -20,7 +21,8 @@ if client_id is None or client_secret is None:
     logger.error("Please setup environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET")
     exit(0)
 
-app = Deribit(client_id=client_id, client_secret=client_secret, auth_type=AuthType.CREDENTIALS)
+app = Deribit(client_id=client_id, client_secret=client_secret, auth_type=AuthType.CREDENTIALS,
+              get_id=lambda: str(uuid4()))
 
 direct_requests = {}
 
@@ -93,6 +95,7 @@ async def on_handle_response(data):
         print(f"Caught response {repr(data)} to direct request {direct_requests[request_id]}")
     else:
         logger.warning(f"Can't find request with id:{request_id} for response:{repr(data)}")
+
 
 app.on_connect_ws = start_credential
 app.on_handle_response = on_handle_response
