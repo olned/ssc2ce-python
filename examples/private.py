@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import os
-from pprint import pprint
 
 from dotenv import load_dotenv
 from deribit.deribit import Deribit, AuthType
@@ -22,6 +21,8 @@ if client_id is None or client_secret is None:
     exit(0)
 
 app = Deribit(client_id=client_id, client_secret=client_secret, auth_type=AuthType.CREDENTIALS)
+
+direct_requests = {}
 
 
 async def start_credential():
@@ -45,12 +46,14 @@ async def do_something_after_login():
         }
     })
 
-    await app.ws.send_json({
+    direct_request = {
         "jsonrpc": "2.0",
         "id": "pseudo_id",
         "method": "private/enable_cancel_on_disconnect",
         "params": {}
-    })
+    }
+    direct_requests[direct_request["id"]] = direct_request
+    await app.ws.send_json(direct_request)
 
     await app.send_private(request={
         "method": "public/subscribe",
@@ -60,7 +63,7 @@ async def do_something_after_login():
 
 
 async def printer(**kwargs):
-    pprint(kwargs)
+    print(repr(kwargs))
 
 
 async def handle_subscription(data: dict):
@@ -84,8 +87,15 @@ async def on_token(params):
     asyncio.ensure_future(setup_refresh(refresh_interval))
 
 
+async def on_handle_response(data):
+    request_id = data["id"]
+    if request_id in direct_requests:
+        print(f"Caught response {repr(data)} to direct request {direct_requests[request_id]}")
+    else:
+        logger.warning(f"Can't find request with id:{request_id} for response:{repr(data)}")
+
 app.on_connect_ws = start_credential
-app.on_message = app.handle_message
+app.on_handle_response = on_handle_response
 app.on_authenticated = after_login
 app.on_token = on_token
 app.method_routes += [
