@@ -58,6 +58,8 @@ class Deribit(SessionWrapper):
         self.client_secret = client_secret
         self.scope = scope
         self._timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=20)
+
+        self.on_message = self.handle_message
         self.method_routes = [
             ("heartbeat", self.handle_heartbeat),
         ]
@@ -259,17 +261,17 @@ class Deribit(SessionWrapper):
                         else:
                             logger.error(f"Receive error {repr(data)}")
                     else:
-                        response_id = data["id"]
-                        request = self.requests.get(response_id)
+                        request_id = data["id"]
+                        request = self.requests.get(request_id)
                         if request:
                             await self.handle_response(request=request, response=data)
 
-                            del self.requests[response_id]
+                            del self.requests[request_id]
                         else:
                             if self.on_handle_response:
                                 await self.on_handle_response(data)
                             else:
-                                logger.warning(f"Unknown id:{response_id}, the on_handle_response event must be defined."
+                                logger.warning(f"Unknown id:{request_id}, the on_handle_response event must be defined."
                                                f" Unhandled message {data}")
 
                 else:
