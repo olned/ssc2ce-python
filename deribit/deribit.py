@@ -4,7 +4,7 @@ from enum import IntEnum
 import aiohttp
 
 from deribit.session import SessionWrapper
-from deribit.utils import resolve_route
+from deribit.utils import resolve_route, hide_secret
 
 
 class AuthType(IntEnum):
@@ -108,7 +108,7 @@ class Deribit(SessionWrapper):
             **request
         }
         self.requests[request_id] = request
-        self.logger.info(f"sending:{repr(request)}")
+        self.logger.info(f"sending:{repr(hide_secret(request))}")
         await self.ws.send_json(request)
         return request_id
 
@@ -123,7 +123,7 @@ class Deribit(SessionWrapper):
             **request
         }
         self.requests[request_id] = request
-        self.logger.info(f"sending:{repr(request)}")
+        self.logger.info(f"sending:{repr(hide_secret(request))}")
         await self.ws.send_json(request)
         return request_id
 
@@ -253,10 +253,9 @@ class Deribit(SessionWrapper):
         return request_id
 
     async def handle_message(self, message: aiohttp.WSMessage):
-        self.logger.debug(f"handling:{repr(message)}")
-
         if message.type == aiohttp.WSMsgType.TEXT:
             data = message.json()
+            self.logger.debug(f"handling:{repr(hide_secret(data))}")
 
             if "method" in data:
                 await self.handle_method_message(data)
@@ -330,7 +329,7 @@ class Deribit(SessionWrapper):
         elif grant_type == "client_signature":
             pass
         else:
-            self.logger.error(f"Unknown grant_type {repr(request)} : {repr(response)}")
+            self.logger.error(f"Unknown grant_type {repr(hide_secret(request))} : {repr(hide_secret(response))}")
 
     def close(self):
         super()._close()
