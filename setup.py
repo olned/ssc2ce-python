@@ -3,7 +3,7 @@
 from distutils.core import setup
 from deribit.VERSION import __version__
 
-setup(name='tcc-deribit',
+setup(name='ons-deribit',
       version=__version__,
       description='Simple Deribit API v2 on Websocket',
       author='Oleg Nedbaylo',
