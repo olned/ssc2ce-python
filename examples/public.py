@@ -30,8 +30,8 @@ async def start_public():
     })
 
 
-async def printer(**kwargs):
-    pprint(kwargs)
+async def printer(data):
+    pprint(data)
 
 
 app.on_connect_ws = start_public
