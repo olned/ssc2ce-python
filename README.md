@@ -14,11 +14,11 @@ If you clone repository you can run examples from the root directory.
 $ PYTHONPATH=.:$PYTHONPATH python examples/public.py
 ```
 
-The private.py example uses [python-dotenv](https://github.com/theskumar/python-dotenv), you must install it if you want the example to work right out of the box or make the corresponding changes.
+The private.py example uses [python-dotenv](https://github.com/theskumar/python-dotenv), you must either install it if you want the example to work right out of the box,
 ```bash
 $ pip install python-dotenv
 ```
-or make the corresponding changes, just removed followed code:
+or make the corresponding changes, removed followed code.
 ```python
     from dotenv import load_dotenv
     dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
