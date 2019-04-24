@@ -4,6 +4,7 @@ from enum import IntEnum
 import aiohttp
 
 from deribit.session import SessionWrapper
+from deribit.utils import resolve_route, hide_secret
 
 
 class AuthType(IntEnum):
@@ -107,7 +108,7 @@ class Deribit(SessionWrapper):
             **request
         }
         self.requests[request_id] = request
-        self.logger.info(f"sending:{repr(request)}")
+        self.logger.info(f"sending:{repr(hide_secret(request))}")
         await self.ws.send_json(request)
         return request_id
 
@@ -122,7 +123,7 @@ class Deribit(SessionWrapper):
             **request
         }
         self.requests[request_id] = request
-        self.logger.info(f"sending:{repr(request)}")
+        self.logger.info(f"sending:{repr(hide_secret(request))}")
         await self.ws.send_json(request)
         return request_id
 
@@ -252,10 +253,9 @@ class Deribit(SessionWrapper):
         return request_id
 
     async def handle_message(self, message: aiohttp.WSMessage):
-        self.logger.debug(f"handling:{repr(message)}")
-
         if message.type == aiohttp.WSMsgType.TEXT:
             data = message.json()
+            self.logger.debug(f"handling:{repr(hide_secret(data))}")
 
             if "method" in data:
                 await self.handle_method_message(data)
@@ -277,8 +277,9 @@ class Deribit(SessionWrapper):
                             if self.on_handle_response:
                                 await self.on_handle_response(data)
                             else:
-                                self.logger.warning(f"Unknown id:{request_id}, the on_handle_response event must be defined."
-                                               f" Unhandled message {data}")
+                                self.logger.warning(
+                                    f"Unknown id:{request_id}, the on_handle_response event must be defined."
+                                    f" Unhandled message {data}")
 
                 else:
                     self.logger.warning(f"Unsupported message {message.data}")
@@ -290,26 +291,23 @@ class Deribit(SessionWrapper):
 
     async def handle_response(self, request, response):
         method = request["method"]
-        key, handler = None, None
-        for key, handler in self.response_routes:
-            if method == key:
-                await handler(request=request, response=response)
-                return
+        handler = resolve_route(method, self.response_routes)
 
-        if key is not None and key == "" and handler:
+        if handler:
             return await handler(request=request, response=response)
+
         self.logger.warning(f"Unhandled method:{method} response:{repr(response)} to request:{repr(request)}.")
+        return
 
     async def handle_method_message(self, data):
         method = data["method"]
-        key, handler = None, None
-        for key, handler in self.method_routes:
-            if method == key:
-                return await handler(data)
+        handler = resolve_route(method, self.method_routes)
 
-        if key is not None and key == "" and handler:
+        if handler:
             return await handler(data)
+
         self.logger.warning(f"Unhandled message:{repr(data)}.")
+        return
 
     async def handle_heartbeat(self, data):
         if data["params"]["type"] == "test_request":
@@ -331,7 +329,7 @@ class Deribit(SessionWrapper):
         elif grant_type == "client_signature":
             pass
         else:
-            self.logger.error(f"Unknown grant_type {repr(request)} : {repr(response)}")
+            self.logger.error(f"Unknown grant_type {repr(hide_secret(request))} : {repr(hide_secret(response))}")
 
     def close(self):
         super()._close()

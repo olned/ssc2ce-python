@@ -40,7 +40,7 @@ async def handle_subscription(data):
 conn.on_connect_ws = subscribe
 conn.method_routes += [("subscription", handle_subscription)]
 
-loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
+loop = asyncio.get_event_loop()
 
 
 try:
