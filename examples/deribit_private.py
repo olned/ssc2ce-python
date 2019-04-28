@@ -12,7 +12,7 @@ dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.WARNING)
-logger = logging.getLogger("ons-derobit-ws-python-sample")
+logger = logging.getLogger("deribit-private")
 
 client_id = os.environ.get('DERIBIT_CLIENT_ID')
 client_secret = os.environ.get('DERIBIT_CLIENT_SECRET')
