@@ -172,3 +172,4 @@ class Bitfinex(SessionWrapper):
 
     async def stop(self):
         await self.ws.close()
+        self.close()
