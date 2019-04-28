@@ -2,20 +2,52 @@
 A Set of Simple Connectors for access To Cryptocurrency Exchanges via websocket based on
  [aiohttp](https://aiohttp.readthedocs.io) .
 
+## Installation
+Install ssc2ce with:
+```bash
+$ pip install ssc2ce
+```
+
+## Bitfinex
+### Description
+API description look at [Websocket API v2](https://docs.bitfinex.com/v2/docs/ws-general)
+### Basic example
+```python
+import asyncio
+
+from ssc2ce import Bitfinex
+
+conn = Bitfinex()
+
+
+async def handle_subscription(data):
+    print(data)
+
+async def subscribe():
+    await conn.subscribe({
+        "channel": "ticker",
+        "symbol": "tBTCUSD"
+    }, handler=handle_subscription)
+
+
+conn.on_connect_ws = subscribe
+
+loop = asyncio.get_event_loop()
+
+try:
+    loop.run_until_complete(conn.run_receiver())
+except KeyboardInterrupt:
+    print("Application closed by KeyboardInterrupt.")
+
+```
+
 ## Deribit 
 ### Description
 
-
 API description look at [Deribit API v2 websocket](https://docs.deribit.com/v2/?python#json-rpc)
 
-### Installation
-Install ons-deribit with:
-```bash
-$ pip install ons-deribit
-```
 ### Basic example
 ```python
-#!/usr/bin/env python
 import asyncio
 from ssc2ce import Deribit
 
@@ -52,7 +84,7 @@ except KeyboardInterrupt:
     print("Application closed by KeyboardInterrupt.")
 
 ```
-### Run examples from a clone
+## Run examples from a clone
 
 If you clone repository you can run examples from the root directory.
 ```bash
