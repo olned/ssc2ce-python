@@ -2,20 +2,20 @@
 
 import setuptools
 
-from deribit.VERSION import __version__
+from ssc2ce.VERSION import __version__
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='ons-deribit',
+    name='ssc2ce',
     version=__version__,
     author='Oleg Nedbaylo',
     author_email='olned64@gmail.com',
-    description='Simple Deribit API v2 on Websocket',
+    description='A Set of Simple Connectors for access To Cryptocurrency Exchanges',
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url='https://github.com/olned/ons-deribit-ws-python',
+    url='https://github.com/olned/ssc2ce-python',
     packages=setuptools.find_packages(),
     install_requires=['aiohttp'],
     classifiers=[

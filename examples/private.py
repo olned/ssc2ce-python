@@ -6,7 +6,7 @@ import os
 from uuid import uuid4
 
 from dotenv import load_dotenv
-from deribit.deribit import Deribit, AuthType
+from ssc2ce.deribit import Deribit, AuthType
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
