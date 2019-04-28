@@ -5,7 +5,7 @@ import logging
 from ssc2ce import Bitfinex
 
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
-logger = logging.getLogger("ons-derobit-ws-python-sample")
+logger = logging.getLogger("bitfinex-basic-example")
 
 conn = Bitfinex()
 
