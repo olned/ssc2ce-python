@@ -61,6 +61,7 @@ class Bitfinex(SessionWrapper):
 
     async def subscribe(self, request, handler):
         self.subscriptions.append((request, handler))
+        self.logger.info(f"subscribe {request}")
         await self.ws.send_json({
             "event": "subscribe",
             **request
