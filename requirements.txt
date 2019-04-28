@@ -1,2 +1,4 @@
 aiohttp
 python-dotenv
+twine
+wheel
