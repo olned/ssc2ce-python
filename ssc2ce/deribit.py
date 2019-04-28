@@ -2,6 +2,7 @@ import logging
 
 import aiohttp
 
+from .exceptions import Ssc2ceError
 from .common import AuthType
 from .session import SessionWrapper
 from .utils import resolve_route, hide_secret, IntId
@@ -24,7 +25,6 @@ class Deribit(SessionWrapper):
     last_message = None
 
     def __init__(self,
-                 ws_api: str = None,
                  client_id: str = None,
                  client_secret: str = None,
                  scope: str = "session",
@@ -39,14 +39,10 @@ class Deribit(SessionWrapper):
 
         if auth_type & (AuthType.CREDENTIALS | AuthType.SIGNATURE):
             if client_secret is None or client_id is None:
-                raise Exception(f" Authentication {str(auth_type)} need client_id and client_secret")
+                raise Ssc2ceError(f" Authentication {str(auth_type)} need client_id and client_secret")
 
-        # Todo: implement client_signature
         if auth_type == AuthType.SIGNATURE:
-            raise Exception(f" Authentication {str(auth_type)} still does not support. It is in my todo list.")
-
-        if ws_api:
-            self.ws_api = ws_api
+            raise NotImplemented(f"Authentication {str(auth_type)} for Deribit is not implemented.")
 
         self.auth_type = auth_type
         self.client_id = client_id
