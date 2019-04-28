@@ -59,7 +59,7 @@ If you clone repository you can run examples from the root directory.
 $ PYTHONPATH=.:$PYTHONPATH python examples/basic_example.py
 ```
 
-The private.py example uses [python-dotenv](https://github.com/theskumar/python-dotenv), you must either install it if you want the example to work right out of the box,
+The deribit_private.py example uses [python-dotenv](https://github.com/theskumar/python-dotenv), you must either install it if you want the example to work right out of the box,
 ```bash
 $ pip install python-dotenv
 ```
