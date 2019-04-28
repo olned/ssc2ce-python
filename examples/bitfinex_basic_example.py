@@ -12,12 +12,6 @@ conn = Bitfinex()
 
 async def handle_subscription(data):
     print(data)
-    # method = data.get("method")
-    # if method and method == "subscription":
-    #     if data["params"]["channel"].startswith("deribit_price_index"):
-    #         index_name = data["params"]["data"]["index_name"]
-    #         price = data["params"]["data"]["price"]
-    #         print(f" Deribit Price Index {index_name.upper()}: {price}")
 
 
 async def subscribe():
@@ -28,7 +22,6 @@ async def subscribe():
 
 
 conn.on_connect_ws = subscribe
-# conn.routes.insert(0, ("ticker", handle_subscription))
 
 loop = asyncio.get_event_loop()
 
