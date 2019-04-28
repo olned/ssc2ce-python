@@ -1,25 +1,11 @@
 import logging
-from enum import IntEnum
 
 import aiohttp
 
-from deribit.session import SessionWrapper
-from deribit.utils import resolve_route, hide_secret
-
-
-class AuthType(IntEnum):
-    NONE = 0
-    PASSWORD = 1
-    CREDENTIALS = 2
-    SIGNATURE = 3
-
-
-class IntId:
-    id = 0
-
-    def get_id(self):
-        self.id += 1
-        return self.id
+from .exceptions import Ssc2ceError
+from .common import AuthType
+from .session import SessionWrapper
+from .utils import resolve_route, hide_secret, IntId
 
 
 class Deribit(SessionWrapper):
@@ -33,35 +19,30 @@ class Deribit(SessionWrapper):
     on_response_error = None
     on_handle_response = None
 
-    ws_api = 'wss://test.deribit.com/ws/api/v2/'
-
     requests = {}
     auth_params: dict = None
 
     last_message = None
 
     def __init__(self,
-                 ws_api: str = None,
                  client_id: str = None,
                  client_secret: str = None,
                  scope: str = "session",
+                 testnet: bool = True,
                  auth_type: AuthType = AuthType.NONE,
                  get_id=IntId().get_id):
         super().__init__()
 
+        self.ws_api = f"wss://{'test' if testnet else 'www'}.deribit.com/ws/api/v2/"
         self.get_id = get_id
-        self.logger = logging.getLogger(__name__ + '.Deribit')
+        self.logger = logging.getLogger(__name__)
 
         if auth_type & (AuthType.CREDENTIALS | AuthType.SIGNATURE):
             if client_secret is None or client_id is None:
-                raise Exception(f" Authentication {str(auth_type)} need client_id and client_secret")
+                raise Ssc2ceError(f" Authentication {str(auth_type)} need client_id and client_secret")
 
-        # Todo: implement client_signature
         if auth_type == AuthType.SIGNATURE:
-            raise Exception(f" Authentication {str(auth_type)} still does not support. It is in my todo list.")
-
-        if ws_api:
-            self.ws_api = ws_api
+            raise NotImplemented(f"Authentication {str(auth_type)} for Deribit is not implemented.")
 
         self.auth_type = auth_type
         self.client_id = client_id

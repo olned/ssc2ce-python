@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import asyncio
-from deribit import Deribit
+from ssc2ce import Deribit
 
 conn = Deribit()
 

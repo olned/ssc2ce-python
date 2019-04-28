@@ -27,3 +27,11 @@ def hide_secret(request):
             data[key] = "***"
 
     return data
+
+
+class IntId:
+    id = 0
+
+    def get_id(self):
+        self.id += 1
+        return self.id
