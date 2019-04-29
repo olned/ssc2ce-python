@@ -1,4 +1,5 @@
 import logging
+from time import time
 
 import aiohttp
 
@@ -18,6 +19,7 @@ class Deribit(SessionWrapper):
     on_subscription = None
     on_response_error = None
     on_handle_response = None
+    receipt_time = None
 
     requests = {}
     auth_params: dict = None
@@ -66,6 +68,7 @@ class Deribit(SessionWrapper):
 
         while self.ws and not self.ws.closed:
             message = await self.ws.receive()
+            self.receipt_time = time()
             self.last_message = message
 
             if message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.ERROR):
@@ -208,22 +211,6 @@ class Deribit(SessionWrapper):
 
         request_id = await self.send_private(msg)
         return request_id
-
-    # async def auth_client_signature(self, client_id, client_secret, scope: str = None):
-    #     msg = {
-    #         "method": "public/auth",
-    #         "params": {
-    #             "grant_type": "password",
-    #             "username": client_id,
-    #             "password": client_secret
-    #         }
-    #     }
-    #
-    #     if scope:
-    #         msg["scope"] = scope
-    #
-    #     await self.send_public(msg)
-    #     return
 
     async def set_heartbeat(self, interval: int = 15):
         request_id = await self.send_public({"method": "public/set_heartbeat", "params": {"interval": interval}})
