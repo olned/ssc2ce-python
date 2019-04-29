@@ -1,4 +1,5 @@
 import logging
+from time import time
 
 import aiohttp
 
@@ -23,6 +24,7 @@ class Bitfinex(SessionWrapper):
     on_close_ws = None
     on_maintenance = None
     on_conf = None
+    receipt_time = None
 
     ws_api = 'wss://api-pub.bitfinex.com/ws/2'
 
@@ -61,6 +63,7 @@ class Bitfinex(SessionWrapper):
 
     async def subscribe(self, request, handler):
         self.subscriptions.append((request, handler))
+        self.logger.info(f"subscribe {request}")
         await self.ws.send_json({
             "event": "subscribe",
             **request
@@ -71,6 +74,7 @@ class Bitfinex(SessionWrapper):
 
         while self.ws and not self.ws.closed:
             message = await self.ws.receive()
+            self.receipt_time = time()
             self.last_message = message
 
             if message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.ERROR):
@@ -171,3 +175,4 @@ class Bitfinex(SessionWrapper):
 
     async def stop(self):
         await self.ws.close()
+        self.close()
