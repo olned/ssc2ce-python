@@ -10,8 +10,8 @@ logger = logging.getLogger("bitfinex-basic-example")
 conn = Bitfinex()
 
 
-async def handle_subscription(data):
-    print(data)
+async def handle_subscription(data, self):
+    print(data, self.receipt_time * 1000 - data[-1])
 
 
 async def subscribe():
