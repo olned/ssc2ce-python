@@ -25,6 +25,14 @@ conn.on_connect_ws = subscribe
 
 loop = asyncio.get_event_loop()
 
+
+def stop():
+    print("STOP")
+    asyncio.ensure_future(conn.stop())
+
+
+loop.call_later(10, stop)
+
 try:
     loop.run_until_complete(conn.run_receiver())
 except KeyboardInterrupt:
