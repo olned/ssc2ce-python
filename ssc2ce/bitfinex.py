@@ -1,4 +1,5 @@
 import logging
+from time import time
 
 import aiohttp
 
@@ -23,6 +24,7 @@ class Bitfinex(SessionWrapper):
     on_close_ws = None
     on_maintenance = None
     on_conf = None
+    receipt_time = None
 
     ws_api = 'wss://api-pub.bitfinex.com/ws/2'
 
@@ -72,6 +74,7 @@ class Bitfinex(SessionWrapper):
 
         while self.ws and not self.ws.closed:
             message = await self.ws.receive()
+            self.receipt_time = time()
             self.last_message = message
 
             if message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.ERROR):
@@ -95,7 +98,7 @@ class Bitfinex(SessionWrapper):
                 channel_id = data[0]
                 handler = self.channel_handlers.get(channel_id)
                 if handler:
-                    await handler(data)
+                    await handler(data, self)
                 else:
                     self.logger.warning(f"Can't find handler for channel_id{channel_id}, {data}")
             elif isinstance(data, dict):
