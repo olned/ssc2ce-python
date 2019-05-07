@@ -10,8 +10,8 @@ logger = logging.getLogger("bitfinex-basic-example")
 conn = Bitfinex()
 
 
-async def handle_subscription(data):
-    print(data)
+async def handle_subscription(data, self):
+    print(data, self.receipt_time * 1000 - data[-1])
 
 
 async def subscribe():
@@ -24,6 +24,14 @@ async def subscribe():
 conn.on_connect_ws = subscribe
 
 loop = asyncio.get_event_loop()
+
+
+def stop():
+    print("STOP")
+    asyncio.ensure_future(conn.stop())
+
+
+loop.call_later(10, stop)
 
 try:
     loop.run_until_complete(conn.run_receiver())

@@ -98,7 +98,7 @@ class Bitfinex(SessionWrapper):
                 channel_id = data[0]
                 handler = self.channel_handlers.get(channel_id)
                 if handler:
-                    await handler(data)
+                    await handler(data, self)
                 else:
                     self.logger.warning(f"Can't find handler for channel_id{channel_id}, {data}")
             elif isinstance(data, dict):
