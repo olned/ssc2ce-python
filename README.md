@@ -20,8 +20,9 @@ from ssc2ce import Bitfinex
 conn = Bitfinex()
 
 
-async def handle_subscription(data):
-    print(data)
+async def handle_subscription(data, connector: Bitfinex):
+    print(data, f"received:{connector.receipt_time}")
+
 
 async def subscribe():
     await conn.subscribe({
