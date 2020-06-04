@@ -27,11 +27,6 @@ app = Deribit(client_id=client_id, client_secret=client_secret, auth_type=AuthTy
 direct_requests = {}
 
 
-async def start_credential():
-    await app.auth_login()
-    # await app.set_heartbeat(15)
-
-
 async def do_something_after_login():
     await app.send_private(request={
         "method": "private/get_account_summary",
@@ -61,6 +56,13 @@ async def do_something_after_login():
         "method": "public/subscribe",
         "params": {
             "channels": ["quote.BTC-PERPETUAL"]}
+    })
+
+    await app.send_public(request={
+        "method": "public/subscribe",
+        "params": {
+            "channels": ["deribit_price_index.btc_usd"]
+        }
     })
 
 
@@ -97,10 +99,14 @@ async def on_handle_response(data):
         logger.warning(f"Can't find request with id:{request_id} for response:{repr(data)}")
 
 
-app.on_connect_ws = start_credential
+async def on_response_error(data):
+    logger.error(f"Receive error {repr(data)}")
+    asyncio.ensure_future(app.stop())
+
 app.on_handle_response = on_handle_response
 app.on_authenticated = after_login
 app.on_token = on_token
+app.on_response_error = on_response_error
 app.method_routes += [
     ("subscription", handle_subscription),
 ]
