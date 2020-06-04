@@ -3,141 +3,175 @@
 import asyncio
 import logging
 import os
+import re
 from uuid import uuid4
-
+from typing import Pattern
 from dotenv import load_dotenv
 from ssc2ce.deribit import Deribit, AuthType
 
-dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(dotenv_path)
 
-logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.WARNING)
-logger = logging.getLogger("deribit-private")
+class MyApp:
+    def __init__(self):
+        logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
+        self.logger = logging.getLogger("deribit-private")
+        self.direct_requests = {}
 
-client_id = os.environ.get('DERIBIT_CLIENT_ID')
-client_secret = os.environ.get('DERIBIT_CLIENT_SECRET')
+        dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+        load_dotenv(dotenv_path)
 
-if client_id is None or client_secret is None:
-    logger.error("Please setup environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET")
-    exit(0)
+        client_id = os.environ.get('DERIBIT_CLIENT_ID')
+        client_secret = os.environ.get('DERIBIT_CLIENT_SECRET')
 
-app = Deribit(client_id=client_id, client_secret=client_secret, auth_type=AuthType.CREDENTIALS,
-              get_id=lambda: str(uuid4()))
+        if client_id is None or client_secret is None:
+            self.logger.error("Please setup environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET")
+            exit(0)
 
-direct_requests = {}
+        self.deribit = Deribit(client_id=client_id,
+                               client_secret=client_secret,
+                               auth_type=AuthType.CREDENTIALS,
+                               scope=None,
+                               get_id=lambda: str(uuid4()))
+        self.deribit.on_handle_response = self.on_handle_response
+        self.deribit.on_authenticated = self.after_login
+        self.deribit.on_token = self.on_token
+        self.deribit.on_response_error = self.on_response_error
+
+        self.deribit.method_routes += [
+            ("subscription", self.handle_subscription),
+        ]
+        self.deribit.response_routes += [
+            ("public/subscribe", self.printer),
+            ("private/subscribe", self.printer),
+            ("private/get_position", self.printer),
+            ("private/enable_cancel_on_disconnect", self.printer),
+            ("private/get_account_summary", self.printer),
+        ]
+
+        self.subscription_route = [
+            (re.compile(r"book.(.*).raw"), self.handle_order_book_change),
+            (re.compile(r"user.trades.(.*).raw"), self.handle_user_trades),
+            (re.compile(r"user.orders.(.*).raw"), self.handle_user_orders),
+            (re.compile(r"deribit_price_index.(.*)"), self.handle_price_index),
+            (re.compile(r"trades.(.*).raw"), self.handle_trades),
+            (re.compile(r"ticker.(.*).raw"), self.handle_ticker)
+        ]
+
+    async def do_something_after_login(self):
+        await self.deribit.send_private(request={
+            "method": "private/get_account_summary",
+            "params": {
+                "currency": "BTC",
+                "extended": True
+            }
+        })
+
+        await self.deribit.send_private(request={
+            "method": "private/get_position",
+            "params": {
+                "instrument_name": "BTC-PERPETUAL"
+            }
+        })
+
+        await self.deribit.send_public(request={
+            "method": "private/subscribe",
+            "params": {
+                "channels": ["book.BTC-PERPETUAL.raw",
+                             "trades.BTC-PERPETUAL.raw",
+                             "user.orders.BTC-PERPETUAL.raw",
+                             "user.trades.BTC-PERPETUAL.raw"]
+            }
+        })
+
+    async def printer(self, **kwargs):
+        self.logger.info(f"{repr(kwargs)}")
+
+    @staticmethod
+    def resolve_route(value, routes):
+        key, handler = None, None
+        for key, handler in routes:
+            if key:
+                if isinstance(key, str):
+                    if key == value:
+                        return handler
+                elif isinstance(key, Pattern) and re.match(key, value):
+                    return handler
+
+        if key is not None and key == "" and handler:
+            return handler
+
+    async def handle_subscription(self, data: dict):
+        channel = data["params"]["channel"]
+        handler = self.resolve_route(channel, self.subscription_route)
+        if handler:
+            return await handler(data)
+
+    async def after_login(self):
+        asyncio.ensure_future(self.do_something_after_login())
+
+    async def setup_refresh(self, refresh_interval):
+        await asyncio.sleep(refresh_interval)
+        await self.deribit.auth_refresh_token()
+
+    async def on_token(self, params):
+        refresh_interval = min(600, params["expires_in"])
+        asyncio.ensure_future(self.setup_refresh(refresh_interval))
+
+    async def on_handle_response(self, data):
+        request_id = data["id"]
+        if request_id in self.direct_requests:
+            self.logger.info(f"Caught response {repr(data)} to direct request {self.direct_requests[request_id]}")
+        else:
+            self.logger.error(f"Can't find request with id:{request_id} for response:{repr(data)}")
+
+    async def handle_order_book_change(self, message):
+        data = message["params"]["data"]
+        self.logger.debug(f"{repr(data)}")
+
+    async def handle_user_trades(self, message):
+        data = message["params"]["data"]
+        self.logger.info(f"{repr(data)}")
+
+    async def handle_user_orders(self, message):
+        data = message["params"]["data"]
+        self.logger.info(f"{repr(data)}")
+
+    async def handle_price_index(self, message):
+        data = message["params"]["data"]
+        index_name = data['index_name']
+        self.logger.debug(f"{index_name}: {repr(data)}")
+
+    async def handle_trades(self, message):
+        data = message["params"]["data"]
+        self.logger.debug(f"{repr(data)}")
+
+    async def handle_ticker(self, message):
+        data = message["params"]["data"]
+        instrument_name = data['instrument_name']
+        self.logger.debug(f"{instrument_name}: {repr(data)}")
+
+    async def on_response_error(self, data):
+        self.logger.error(f"Receive error {repr(data)}")
+        asyncio.ensure_future(self.deribit.stop())
+
+    def disable_heartbeat(self):
+        asyncio.ensure_future(self.deribit.disable_heartbeat())
+
+    def logout(self):
+        asyncio.ensure_future(self.deribit.auth_logout())
+
+    async def run(self):
+        await self.deribit.run_receiver()
+
+    async def stop(self):
+        await self.deribit.stop()
 
 
-async def do_something_after_login():
-    await app.send_private(request={
-        "method": "private/get_account_summary",
-        "params": {
-            "currency": "BTC",
-            "extended": True
-        }
-    })
-
-    await app.send_private(request={
-        "method": "private/get_position",
-        "params": {
-            "instrument_name": "BTC-PERPETUAL"
-        }
-    })
-
-    direct_request = {
-        "jsonrpc": "2.0",
-        "id": "pseudo_id",
-        "method": "private/enable_cancel_on_disconnect",
-        "params": {}
-    }
-    direct_requests[direct_request["id"]] = direct_request
-    await app.ws.send_json(direct_request)
-
-    await app.send_private(request={
-        "method": "public/subscribe",
-        "params": {
-            "channels": ["quote.BTC-PERPETUAL"]}
-    })
-
-    await app.send_public(request={
-        "method": "public/subscribe",
-        "params": {
-            "channels": ["deribit_price_index.btc_usd"]
-        }
-    })
-
-
-async def printer(**kwargs):
-    print(repr(kwargs))
-
-
-async def handle_subscription(data: dict):
-    if data["params"]["channel"] == 'book.BTC-PERPETUAL.raw':
-        return
-
-    print(repr(data))
-
-
-async def after_login():
-    asyncio.ensure_future(do_something_after_login())
-
-
-async def setup_refresh(refresh_interval):
-    await asyncio.sleep(refresh_interval)
-    await app.auth_refresh_token()
-
-
-async def on_token(params):
-    refresh_interval = min(600, params["expires_in"])
-    asyncio.ensure_future(setup_refresh(refresh_interval))
-
-
-async def on_handle_response(data):
-    request_id = data["id"]
-    if request_id in direct_requests:
-        print(f"Caught response {repr(data)} to direct request {direct_requests[request_id]}")
-    else:
-        logger.warning(f"Can't find request with id:{request_id} for response:{repr(data)}")
-
-
-async def on_response_error(data):
-    logger.error(f"Receive error {repr(data)}")
-    asyncio.ensure_future(app.stop())
-
-app.on_handle_response = on_handle_response
-app.on_authenticated = after_login
-app.on_token = on_token
-app.on_response_error = on_response_error
-app.method_routes += [
-    ("subscription", handle_subscription),
-]
-app.response_routes += [
-    ("public/subscribe", printer),
-    ("private/get_position", printer),
-    ("private/enable_cancel_on_disconnect", printer),
-    ("private/get_account_summary", printer),
-]
-
-loop: asyncio.AbstractEventLoop = asyncio.get_event_loop()
-
-
-def disable_heartbeat():
-    asyncio.ensure_future(app.disable_heartbeat())
-
-
-def logout():
-    asyncio.ensure_future(app.auth_logout())
-
-
-def stop():
-    asyncio.ensure_future(app.stop())
-
-
-# loop.call_later(60, stop)
-
-try:
-    loop.run_until_complete(app.run_receiver())
-    logger.info("Application was stopped.")
-except KeyboardInterrupt:
-    logger.info("Application closed by KeyboardInterrupt.")
-
-app.close()
+if __name__ == '__main__':
+    app = MyApp()
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(app.run())
+    except KeyboardInterrupt:
+        loop.run_until_complete(app.stop())
+    finally:
+        app.logger.info('Program finished')
