@@ -2,14 +2,12 @@
 
 import setuptools
 
-from ssc2ce.VERSION import __version__
-
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name='ssc2ce',
-    version=__version__,
+    version="0.8.2",
     author='Oleg Nedbaylo',
     author_email='olned64@gmail.com',
     description='A Set of Simple Connectors for access To Cryptocurrency Exchanges',
