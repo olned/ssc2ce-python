@@ -10,21 +10,18 @@ from .utils import resolve_route, hide_secret, IntId
 
 
 class Deribit(SessionWrapper):
-    ws: aiohttp.ClientWebSocketResponse = None
-    on_connect_ws = None
-    on_close_ws = None
-    on_message = None
-    on_authenticated = None
-    on_token = None
-    on_subscription = None
-    on_response_error = None
-    on_handle_response = None
-    receipt_time = None
-
-    requests = {}
-    auth_params: dict = None
-
-    last_message = None
+    """
+    Handlers:
+     - on_connect_ws - Called after the connection is established.
+            If auth_type is not equivalent to AuthType.NONE,
+            on_connect_ws will be set to self.auth_login;
+     - on_close_ws - Called after disconnection, default value is None;
+     - on_authenticated - Called after authentication is confirmed, default value is None;
+     - on_token - Called after receiving a response to an authentication request, default value is None;
+     - on_message - Called when a message is received, default value is self.handle_message;
+     - on_handle_response - Called when the message from the exchange does not contain the request id;
+     - on_response_error - Called when the response contains an error message.
+    """
 
     def __init__(self,
                  client_id: str = None,
@@ -33,11 +30,6 @@ class Deribit(SessionWrapper):
                  testnet: bool = True,
                  auth_type: AuthType = AuthType.NONE,
                  get_id=IntId().get_id):
-        super().__init__()
-
-        self.ws_api = f"wss://{'test' if testnet else 'www'}.deribit.com/ws/api/v2/"
-        self.get_id = get_id
-        self.logger = logging.getLogger(__name__)
 
         if auth_type & (AuthType.CREDENTIALS | AuthType.SIGNATURE):
             if client_secret is None or client_id is None:
@@ -46,16 +38,33 @@ class Deribit(SessionWrapper):
         if auth_type == AuthType.SIGNATURE:
             raise NotImplemented(f"Authentication {str(auth_type)} for Deribit is not implemented.")
 
-        if AuthType != AuthType.NONE and self.on_connect_ws is None:
-            self.on_connect_ws = self.auth_login
+        super().__init__()
 
+        self.ws: aiohttp.ClientWebSocketResponse = None
+
+        self.on_connect_ws = self.auth_login if auth_type != AuthType.NONE else None
+        self.on_close_ws = None
+        self.on_message = self.handle_message
+        self.on_authenticated = None
+        self.on_token = None
+        # self.on_subscription = None
+        self.on_response_error = None
+        self.on_handle_response = None
+
+        self.receipt_time = None
+        self.requests = {}
+        self.auth_params: dict = None
+        self.last_message = None
+        self.ws_api = f"wss://{'test' if testnet else 'www'}.deribit.com/ws/api/v2/"
+        self.get_id = get_id
+        self.logger = logging.getLogger(__name__)
         self.auth_type = auth_type
         self.client_id = client_id
         self.client_secret = client_secret
         self.scope = scope
+
         self._timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=20)
 
-        self.on_message = self.handle_message
         self.method_routes = [
             ("heartbeat", self.handle_heartbeat),
         ]
@@ -293,6 +302,7 @@ class Deribit(SessionWrapper):
             if self.on_token:
                 await self.on_token(response["result"])
         elif grant_type in ("client_credentials", "password"):
+            # TODO - Why we use two handlers?
             if self.on_authenticated:
                 await self.on_authenticated()
             if self.on_token:
@@ -306,7 +316,4 @@ class Deribit(SessionWrapper):
         super()._close()
 
     async def stop(self):
-        if self.auth_params:
-            await self.auth_logout()
-        else:
-            await self.ws.close()
+        await self.ws.close()
