@@ -46,6 +46,9 @@ class Deribit(SessionWrapper):
         if auth_type == AuthType.SIGNATURE:
             raise NotImplemented(f"Authentication {str(auth_type)} for Deribit is not implemented.")
 
+        if AuthType != AuthType.NONE and self.on_connect_ws is None:
+            self.on_connect_ws = self.auth_login
+
         self.auth_type = auth_type
         self.client_id = client_id
         self.client_secret = client_secret
@@ -231,7 +234,7 @@ class Deribit(SessionWrapper):
                 if "id" in data:
                     if "error" in data:
                         if self.on_response_error:
-                            await self.on_response_error()
+                            await self.on_response_error(data)
                         else:
                             self.logger.error(f"Receive error {repr(data)}")
                     else:
