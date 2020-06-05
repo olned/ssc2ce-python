@@ -3,10 +3,10 @@ from time import time
 
 import aiohttp
 
-from .exceptions import Ssc2ceError
-from .common import AuthType
-from .session import SessionWrapper
-from .utils import resolve_route, hide_secret, IntId
+from ssc2ce.common.exceptions import Ssc2ceError
+from ssc2ce.common import AuthType
+from ssc2ce.common.session import SessionWrapper
+from ssc2ce.common.utils import resolve_route, hide_secret, IntId
 
 
 class Deribit(SessionWrapper):
@@ -325,7 +325,7 @@ class Deribit(SessionWrapper):
         """
         return await self.send_public(request=dict(method="public/get_currencies", params={}), callback=callback)
 
-    async def get_instruments(self, currency: str, kind: str = None, callback=None) -> int:
+    async def get_instruments(self, currency: str, kind: str = None, expired: bool = False, callback=None) -> int:
         """
         Send a request for a list available trading instruments
         :param currency: The currency symbol: BTC or ETH
@@ -335,10 +335,11 @@ class Deribit(SessionWrapper):
         """
         request = {"method": "public/get_instruments",
                    "params": {
-                       "currency": currency
+                       "currency": currency,
+                       "expired": expired
                    }}
         if kind:
-            request["kind"] = kind
+            request["params"]["kind"] = kind
 
         return await self.send_public(request=request, callback=callback)
 

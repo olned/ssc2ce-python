@@ -7,7 +7,7 @@ import re
 from uuid import uuid4
 from typing import Pattern
 from dotenv import load_dotenv
-from ssc2ce.deribit import Deribit, AuthType
+from ssc2ce import Deribit, AuthType
 
 
 class MyApp:

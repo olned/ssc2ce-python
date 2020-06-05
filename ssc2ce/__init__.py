@@ -1,4 +1,5 @@
 from .deribit import Deribit
+from .common import AuthType
 from .bitfinex import Bitfinex
 
 from pkg_resources import get_distribution, DistributionNotFound

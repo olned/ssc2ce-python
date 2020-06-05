@@ -3,8 +3,8 @@ from time import time
 
 import aiohttp
 
-from .session import SessionWrapper
-from .utils import resolve_route
+from ssc2ce.common.session import SessionWrapper
+from ssc2ce.common.utils import resolve_route
 
 from enum import IntEnum
 
