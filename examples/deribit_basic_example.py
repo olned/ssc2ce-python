@@ -1,8 +1,29 @@
 #!/usr/bin/env python
 import asyncio
+import json
 from ssc2ce import Deribit
 
 conn = Deribit()
+
+pending = {}
+
+
+async def handle_instruments(data: dict):
+    del pending[data["id"]]
+    print(json.dumps(data))
+    if not pending:
+        await subscribe()
+
+
+async def handle_currencies(data: dict):
+    for currency in data["result"]:
+        symbol = currency["currency"]
+        id = await conn.get_instruments(symbol, callback=handle_instruments)
+        pending[id] = symbol
+
+
+async def get_currencies():
+    await conn.get_currencies(handle_currencies)
 
 
 async def subscribe():
@@ -23,7 +44,7 @@ async def handle_subscription(data):
             print(f" Deribit Price Index {index_name.upper()}: {price}")
 
 
-conn.on_connect_ws = subscribe
+conn.on_connect_ws = get_currencies
 conn.method_routes += [("subscription", handle_subscription)]
 
 loop = asyncio.get_event_loop()
