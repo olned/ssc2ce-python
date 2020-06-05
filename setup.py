@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='ssc2ce',
-    version="0.8.2",
+    version="0.9.0",
     author='Oleg Nedbaylo',
     author_email='olned64@gmail.com',
     description='A Set of Simple Connectors for access To Cryptocurrency Exchanges',
