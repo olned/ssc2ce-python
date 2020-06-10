@@ -61,7 +61,3 @@ class L2Book(AbstractL2Book):
                 self._asks.delete(change[1])
             else:
                 self._asks.update(price=change[1], size=change[2])
-
-
-def create_l2_order_book(instrument: str) -> AbstractL2Book:
-    return L2Book(instrument)
