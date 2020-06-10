@@ -411,8 +411,8 @@ class Deribit(SessionWrapper, IDeribitController):
 
         if handler:
             return await handler(data)
-
-        self.logger.warning(f"Unhandled message:{repr(data)}.")
+        elif self.parser.on_before_handling is None:
+            self.logger.warning(f"Unhandled message:{repr(data)}.")
 
     async def handle_heartbeat(self, data):
         """

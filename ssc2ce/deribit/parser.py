@@ -10,13 +10,17 @@ class DeribitParser(IDeribitParser):
     """
 
     """
+
     def __init__(self, controller: IDeribitController):
         self.logger = logging.getLogger(__name__)
         self.controller = controller
+        self.on_before_handling = None
 
     async def handle_message(self, message):
+        if self.on_before_handling:
+            self.on_before_handling(message)
+
         data = json.loads(message)
-        self.logger.info(f"handling:{repr(hide_secret(data))}")
 
         if "method" in data:
             await self.controller.handle_method_message(data)
@@ -28,5 +32,5 @@ class DeribitParser(IDeribitParser):
                     request_id = data["id"]
                     if request_id:
                         await self.controller.handle_response(request_id, data)
-            else:
+            elif self.on_before_handling is not None:
                 self.logger.warning(f"Unsupported message {message}")
