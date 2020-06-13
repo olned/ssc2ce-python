@@ -1,3 +1,4 @@
+import json
 import logging
 
 from time import time
@@ -8,7 +9,7 @@ from ssc2ce.common.exceptions import Ssc2ceError
 from ssc2ce.common import AuthType
 from ssc2ce.common.session import SessionWrapper
 from ssc2ce.common.utils import resolve_route, hide_secret, IntId
-from ssc2ce.deribit.parser import DeribitParser, IDeribitController
+from ssc2ce.deribit.icontroller import IDeribitController
 
 
 class Deribit(SessionWrapper, IDeribitController):
@@ -49,7 +50,7 @@ class Deribit(SessionWrapper, IDeribitController):
         self.on_message = self.handle_message
         self.on_authenticated = None
         self.on_token = None
-        # self.on_subscription = None
+        self.on_before_handling = None
         self.on_response_error = None
         self.on_handle_response = None
 
@@ -74,8 +75,6 @@ class Deribit(SessionWrapper, IDeribitController):
             ("public/auth", self.handle_auth),
             ("", self.empty_handler),
         ]
-
-        self.parser = DeribitParser(self)
 
     async def run_receiver(self):
         """
@@ -103,11 +102,12 @@ class Deribit(SessionWrapper, IDeribitController):
                 continue
 
             if message.type == aiohttp.WSMsgType.TEXT:
+                if self.on_before_handling:
+                    self.on_before_handling(message.data)
+
                 await self.on_message(message.data)
             else:
                 self.logger.warning(f"Unknown type of message {repr(message)}")
-
-            # if self.on_message:
 
     def close(self):
         super()._close()
@@ -357,7 +357,19 @@ class Deribit(SessionWrapper, IDeribitController):
         :param message:
         :return:
         """
-        await self.parser.handle_message(message)
+        data = json.loads(message)
+        if "method" in data:
+            await self.handle_method_message(data)
+        else:
+            if "id" in data:
+                if "error" in data:
+                    await self.handle_error(data)
+                else:
+                    request_id = data["id"]
+                    if request_id:
+                        await self.handle_response(request_id, data)
+            else:
+                await self.handle_method_message(data)
 
     async def empty_handler(self, **kwargs) -> None:
         """
@@ -411,7 +423,7 @@ class Deribit(SessionWrapper, IDeribitController):
 
         if handler:
             return await handler(data)
-        elif self.parser.on_before_handling is None:
+        elif not self.on_before_handling:
             self.logger.warning(f"Unhandled message:{repr(data)}.")
 
     async def handle_heartbeat(self, data):

@@ -32,7 +32,7 @@ class BookMaintainer:
         if self.top_ask[0] != self.book.asks[0][0] or self.top_ask[0] != self.book.asks[0][0]:
             self.top_ask = self.book.asks[0].copy()
             self.top_bid = self.book.bids[0].copy()
-            print(f"{self.book.instrument} bid:{self.top_bid[0]} ask:{self.top_ask[0]}")
+            logger.info(f"{self.book.instrument} bid:{self.top_bid[0]} ask:{self.top_ask[0]}")
 
 
 btc = BookMaintainer("BTC-USD")
