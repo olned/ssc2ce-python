@@ -10,7 +10,7 @@ conn = Deribit()
 pending = {}
 
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
-logger = logging.getLogger("deribit-book")
+logger = logging.getLogger("deribit-writer")
 
 instruments = []
 
@@ -67,7 +67,7 @@ def dump(msg: str):
     output.write('\n')
 
 
-conn.parser.on_before_handling = dump
+conn.on_before_handling = dump
 
 conn.on_connect_ws = get_currencies
 
