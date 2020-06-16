@@ -10,13 +10,13 @@ from ssc2ce.deribit.parser import DeribitParser
 
 conn = Deribit()
 parser = DeribitParser(conn)
-conn.on_message = parser.handle_message
+conn.on_message = parser.parse
 watcher = BookWatcher(parser)
 
 pending = {}
 instruments = []
 
-logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.DEBUG)
 logger = logging.getLogger("deribit-book")
 
 
