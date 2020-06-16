@@ -96,7 +96,7 @@ If you clone repository you can run examples from the root directory.
 $ PYTHONPATH=.:$PYTHONPATH python examples/bitfinex_basic_example.py
 ```
 
-To run some examples, you may need additional modules, you can install them from the '_requirements.txt_' file.
+To run some examples, you may need additional modules, you can install them from the `requirements.txt` file.
 
 ```bash
 $ pip install -r requirements.txt
