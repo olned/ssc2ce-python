@@ -1,11 +1,11 @@
 import logging
-from ssc2ce.common.l2_book import L2Book
+from ssc2ce.common import L2Book
 from collections import deque
 
 from ssc2ce.common.exceptions import BrokenOrderBook
 
 
-class L2Book(L2Book):
+class BitfinexL2Book(L2Book):
     change_id = None
     timestamp = None
     logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ class L2Book(L2Book):
 
         :param instrument:
         """
-        AbstractL2Book.__init__(self, instrument)
+        L2Book.__init__(self, instrument)
 
     def handle_snapshot(self, message: dict) -> None:
         """
@@ -23,15 +23,14 @@ class L2Book(L2Book):
         :param message:
         :return:
         """
-        self.asks.clear()
-        self.bids.clear()
+        self.clear()
 
         for item in message[1]:
             price = item[2]
             if price < 0:
-                self.asks.add([item[0], -price])
+                self.asks.add(item[0], -price)
             else:
-                self.bids.add([item[0], price])
+                self.bids.add(item[0], price)
 
     def handle_update(self, message: dict) -> None:
         """
