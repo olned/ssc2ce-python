@@ -1,2 +1,2 @@
 from .bitfinex import Bitfinex
-from .l2_book import L2Book
+from .l2_book import BitfinexL2Book

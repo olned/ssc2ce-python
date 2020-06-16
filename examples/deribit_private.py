@@ -12,7 +12,8 @@ from ssc2ce import Deribit, AuthType
 
 class MyApp:
     def __init__(self):
-        logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
+        logging.basicConfig(
+            format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
         self.logger = logging.getLogger("deribit-private")
         self.direct_requests = {}
 
@@ -23,7 +24,8 @@ class MyApp:
         client_secret = os.environ.get('DERIBIT_CLIENT_SECRET')
 
         if client_id is None or client_secret is None:
-            self.logger.error("Please setup environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET")
+            self.logger.error(
+                "Please setup environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET")
             exit(0)
 
         self.deribit = Deribit(client_id=client_id,
@@ -31,6 +33,7 @@ class MyApp:
                                auth_type=AuthType.CREDENTIALS,
                                scope=None,
                                get_id=lambda: str(uuid4()))
+
         self.deribit.on_handle_response = self.on_handle_response
         self.deribit.on_authenticated = self.after_login
         self.deribit.on_token = self.on_token
@@ -75,17 +78,27 @@ class MyApp:
         await self.deribit.send_public(request={
             "method": "private/subscribe",
             "params": {
-                "channels": ["book.BTC-PERPETUAL.raw",
-                             "trades.BTC-PERPETUAL.raw",
-                             "user.orders.BTC-PERPETUAL.raw",
-                             "user.trades.BTC-PERPETUAL.raw"]
+                "channels": [
+                    "deribit_price_index.btc_usd",
+                    "book.BTC-PERPETUAL.raw",
+                    "trades.BTC-PERPETUAL.raw",
+                    "user.orders.BTC-PERPETUAL.raw",
+                    "user.trades.BTC-PERPETUAL.raw"
+                ]
+            }
+        })
+
+        await self.deribit.send_public(request={
+            "method": "public/set_heartbeat",
+            "params": {
+                "interval": 15
             }
         })
 
     async def printer(self, **kwargs):
         self.logger.info(f"{repr(kwargs)}")
 
-    @staticmethod
+    @ staticmethod
     def resolve_route(value, routes):
         key, handler = None, None
         for key, handler in routes:
@@ -99,57 +112,59 @@ class MyApp:
         if key is not None and key == "" and handler:
             return handler
 
-    async def handle_subscription(self, data: dict):
+    def handle_subscription(self, data: dict):
         channel = data["params"]["channel"]
         handler = self.resolve_route(channel, self.subscription_route)
         if handler:
-            return await handler(data)
+            return handler(data)
 
-    async def after_login(self):
+    def after_login(self):
         asyncio.ensure_future(self.do_something_after_login())
 
     async def setup_refresh(self, refresh_interval):
         await asyncio.sleep(refresh_interval)
         await self.deribit.auth_refresh_token()
 
-    async def on_token(self, params):
+    def on_token(self, params):
         refresh_interval = min(600, params["expires_in"])
         asyncio.ensure_future(self.setup_refresh(refresh_interval))
 
-    async def on_handle_response(self, data):
+    def on_handle_response(self, data):
         request_id = data["id"]
         if request_id in self.direct_requests:
-            self.logger.info(f"Caught response {repr(data)} to direct request {self.direct_requests[request_id]}")
+            self.logger.info(
+                f"Caught response {repr(data)} to direct request {self.direct_requests[request_id]}")
         else:
-            self.logger.error(f"Can't find request with id:{request_id} for response:{repr(data)}")
+            self.logger.error(
+                f"Can't find request with id:{request_id} for response:{repr(data)}")
 
-    async def handle_order_book_change(self, message):
+    def handle_order_book_change(self, message):
         data = message["params"]["data"]
         self.logger.debug(f"{repr(data)}")
 
-    async def handle_user_trades(self, message):
+    def handle_user_trades(self, message):
         data = message["params"]["data"]
         self.logger.info(f"{repr(data)}")
 
-    async def handle_user_orders(self, message):
+    def handle_user_orders(self, message):
         data = message["params"]["data"]
         self.logger.info(f"{repr(data)}")
 
-    async def handle_price_index(self, message):
+    def handle_price_index(self, message):
         data = message["params"]["data"]
         index_name = data['index_name']
-        self.logger.debug(f"{index_name}: {repr(data)}")
+        self.logger.info(f"{index_name}: {repr(data)}")
 
-    async def handle_trades(self, message):
+    def handle_trades(self, message):
         data = message["params"]["data"]
         self.logger.debug(f"{repr(data)}")
 
-    async def handle_ticker(self, message):
+    def handle_ticker(self, message):
         data = message["params"]["data"]
         instrument_name = data['instrument_name']
         self.logger.debug(f"{instrument_name}: {repr(data)}")
 
-    async def on_response_error(self, data):
+    def on_response_error(self, data):
         self.logger.error(f"Receive error {repr(data)}")
         asyncio.ensure_future(self.deribit.stop())
 

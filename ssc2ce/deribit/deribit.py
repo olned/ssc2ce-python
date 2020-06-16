@@ -1,4 +1,7 @@
+import asyncio
+import json
 import logging
+
 from time import time
 
 import aiohttp
@@ -44,10 +47,13 @@ class Deribit(SessionWrapper):
 
         self.on_connect_ws = self.auth_login if auth_type != AuthType.NONE else None
         self.on_close_ws = None
-        self.on_message = self.handle_message
+
+        self._on_message_is_routine = False
+        self._on_message = None
+
         self.on_authenticated = None
         self.on_token = None
-        # self.on_subscription = None
+        self.on_before_handling = None
         self.on_response_error = None
         self.on_handle_response = None
 
@@ -73,6 +79,15 @@ class Deribit(SessionWrapper):
             ("", self.empty_handler),
         ]
 
+    @property
+    def on_message(self):
+        return self._on_message
+
+    @on_message.setter
+    def on_message(self, value):
+        self._on_message_is_routine = asyncio.iscoroutinefunction(value)
+        self._on_message = value
+
     async def run_receiver(self):
         """
         Establish a connection and start the receiver loop.
@@ -80,7 +95,10 @@ class Deribit(SessionWrapper):
         """
         self.ws = await self._session.ws_connect(self.ws_api)
         if self.on_connect_ws:
-            await self.on_connect_ws()
+            if asyncio.iscoroutinefunction(self.on_connect_ws):
+                await self.on_connect_ws()
+            else:
+                self.on_connect_ws()
 
         # A receiver loop
         while self.ws and not self.ws.closed:
@@ -98,8 +116,21 @@ class Deribit(SessionWrapper):
                 self.logger.debug(f"Connection closing {repr(message)}")
                 continue
 
-            if self.on_message:
-                await self.on_message(message)
+            if message.type == aiohttp.WSMsgType.TEXT:
+                if self.on_before_handling:
+                    self.on_before_handling(message.data)
+
+                processed = False
+                if self._on_message:
+                    if self._on_message_is_routine:
+                        processed = await self._on_message(message.data)
+                    else:
+                        processed = self._on_message(message.data)
+
+                if not processed:
+                    self.handle_message(message.data)
+            else:
+                self.logger.warning(f"Unknown type of message {repr(message)}")
 
     def close(self):
         super()._close()
@@ -111,7 +142,7 @@ class Deribit(SessionWrapper):
         """
         await self.ws.close()
 
-    async def send_public(self, request: dict, callback=None) -> int:
+    async def send_public(self, request: dict, callback=None, logging_it: bool = True) -> int:
         """
         Send a public request
 
@@ -125,7 +156,8 @@ class Deribit(SessionWrapper):
             "id": request_id,
             **request
         }
-        self.logger.info(f"sending:{repr(hide_secret(request))}")
+        if logging_it:
+            self.logger.info(f"sending:{repr(hide_secret(request))}")
         await self.ws.send_json(request)
 
         if callback:
@@ -343,50 +375,27 @@ class Deribit(SessionWrapper):
 
         return await self.send_public(request=request, callback=callback)
 
-    async def handle_message(self, message: aiohttp.WSMessage) -> None:
+    def handle_message(self, message: str) -> None:
         """
 
         :param message:
         :return:
         """
-        if message.type == aiohttp.WSMsgType.TEXT:
-            data = message.json()
-            self.logger.debug(f"handling:{repr(hide_secret(data))}")
-
-            if "method" in data:
-                await self.handle_method_message(data)
-            else:
-                if "id" in data:
-                    if "error" in data:
-                        if self.on_response_error:
-                            await self.on_response_error(data)
-                        else:
-                            self.logger.error(f"Receive error {repr(data)}")
-                    else:
-                        request_id = data["id"]
-                        request = self.requests.get(request_id)
-                        if request:
-                            if "callback" in request:
-                                callback = request["callback"]
-                                await callback(data)
-                            else:
-                                await self.handle_response(request=request, response=data)
-
-                            del self.requests[request_id]
-                        else:
-                            if self.on_handle_response:
-                                await self.on_handle_response(data)
-                            else:
-                                self.logger.warning(
-                                    f"Unknown id:{request_id}, the on_handle_response event must be defined."
-                                    f" Unhandled message {data}")
-
-                else:
-                    self.logger.warning(f"Unsupported message {message.data}")
+        data = json.loads(message)
+        if "method" in data:
+            self.handle_method_message(data)
         else:
-            self.logger.warning(f"Unknown type of message {repr(message)}")
+            if "id" in data:
+                if "error" in data:
+                    self.handle_error(data)
+                else:
+                    request_id = data["id"]
+                    if request_id:
+                        self.handle_response(request_id, data)
+            else:
+                self.handle_method_message(data)
 
-    async def empty_handler(self, **kwargs) -> None:
+    def empty_handler(self, **kwargs) -> None:
         """
         A default handler
         :param kwargs:
@@ -394,22 +403,48 @@ class Deribit(SessionWrapper):
         """
         self.logger.debug(f"{repr(kwargs)}")
 
-    async def handle_response(self, request, response) -> None:
+    def handle_response(self, request_id: int, response: dict) -> None:
         """
 
-        :param request:
+        :param request_id:
         :param response:
         :return:
         """
-        method = request["method"]
-        handler = resolve_route(method, self.response_routes)
 
-        if handler:
-            return await handler(request=request, response=response)
+        request = self.requests.get(request_id)
+        if request:
+            if "callback" in request:
+                callback = request["callback"]
+                if asyncio.iscoroutinefunction(callback):
+                    asyncio.ensure_future(callback(response))
+                else:
+                    callback(response)
+            else:
+                method = request["method"]
+                handler = resolve_route(method, self.response_routes)
+                if handler:
+                    if asyncio.iscoroutinefunction(handler):
+                        asyncio.ensure_future(handler(request=request, response=response))
+                    else:
+                        handler(request=request, response=response)
+                else:
+                    self.logger.warning(f"Unhandled method:{method} response:{repr(response)} "
+                                        f"to request:{repr(request)}.")
 
-        self.logger.warning(f"Unhandled method:{method} response:{repr(response)} to request:{repr(request)}.")
+            del self.requests[request_id]
+        else:
+            if self.on_handle_response:
+                if asyncio.iscoroutinefunction(self.on_handle_response):
+                    asyncio.ensure_future(self.on_handle_response(response))
+                else:
+                    self.on_handle_response(response)
+                return
+            else:
+                self.logger.warning(
+                    f"Unknown id:{request_id}, the on_handle_response event must be defined."
+                    f" Unhandled message {response}")
 
-    async def handle_method_message(self, data) -> None:
+    def handle_method_message(self, data) -> None:
         """
 
         :param data:
@@ -419,20 +454,20 @@ class Deribit(SessionWrapper):
         handler = resolve_route(method, self.method_routes)
 
         if handler:
-            return await handler(data)
+            handler(data)
+        elif not self.on_before_handling:
+            self.logger.warning(f"Unhandled message:{repr(data)}.")
 
-        self.logger.warning(f"Unhandled message:{repr(data)}.")
-
-    async def handle_heartbeat(self, data):
+    def handle_heartbeat(self, data):
         """
 
         :param data:
         :return:
         """
         if data["params"]["type"] == "test_request":
-            await self.send_public({"method": "public/test", "params": {}})
+            asyncio.ensure_future(self.send_public({"method": "public/test", "params": {}}, logging_it=False))
 
-    async def handle_auth(self, request, response) -> None:
+    def handle_auth(self, request, response) -> None:
         """
 
         :param request:
@@ -443,14 +478,20 @@ class Deribit(SessionWrapper):
         grant_type = request["params"]["grant_type"]
         if grant_type == "":
             if self.on_token:
-                await self.on_token(response["result"])
+                self.on_token(response["result"])
         elif grant_type in ("client_credentials", "password"):
             # TODO - Why we use two handlers?
             if self.on_authenticated:
-                await self.on_authenticated()
+                self.on_authenticated()
             if self.on_token:
-                await self.on_token(response["result"])
+                self.on_token(response["result"])
         elif grant_type == "client_signature":
             pass
         else:
             self.logger.error(f"Unknown grant_type {repr(hide_secret(request))} : {repr(hide_secret(response))}")
+
+    def handle_error(self, message):
+        if self.on_response_error:
+            self.on_response_error(message)
+        else:
+            self.logger.error(message)
