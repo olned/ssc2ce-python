@@ -1,5 +1,6 @@
-aiohttp
+aiohttp==3.6.2
+sortedcontainers==2.1.0
+
+ssc2ce_cpp
 python-dotenv
 twine
-wheel
-sortedcontainers
