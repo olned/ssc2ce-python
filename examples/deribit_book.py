@@ -2,16 +2,29 @@
 import asyncio
 import json
 import logging
+import sys
 
 from examples.book_watcher import BookWatcher
 from ssc2ce import Deribit
 
-from ssc2ce.deribit.parser import DeribitParser
+if len(sys.argv) > 1 and "cpp" in sys.argv:
+    from importlib import util
+
+    ssc2ce_cpp_spec = util.find_spec("ssc2ce_cpp")
+    if ssc2ce_cpp_spec:
+        from ssc2ce_cpp import DeribitParser
+    else:
+        print("You must install the ssc2ce_cpp module to use its features.\n pip install ssc2ce_cpp")
+        exit(1)
+else:
+    from ssc2ce.deribit.parser import DeribitParser
 
 conn = Deribit()
-parser = DeribitParser(conn)
-conn.on_message = parser.parse
+parser = DeribitParser()
 watcher = BookWatcher(parser)
+
+# parser.set_on_unprocessed_message(conn.handle_message)
+conn.on_message = parser.parse
 
 pending = {}
 instruments = []
