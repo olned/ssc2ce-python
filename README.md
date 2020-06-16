@@ -67,7 +67,7 @@ async def subscribe():
     })
 
 
-async def handle_subscription(data):
+def handle_subscription(data):
     method = data.get("method")
     if method and method == "subscription":
         if data["params"]["channel"].startswith("deribit_price_index"):
