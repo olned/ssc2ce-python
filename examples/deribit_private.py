@@ -12,7 +12,8 @@ from ssc2ce import Deribit, AuthType
 
 class MyApp:
     def __init__(self):
-        logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
+        logging.basicConfig(
+            format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
         self.logger = logging.getLogger("deribit-private")
         self.direct_requests = {}
 
@@ -23,7 +24,8 @@ class MyApp:
         client_secret = os.environ.get('DERIBIT_CLIENT_SECRET')
 
         if client_id is None or client_secret is None:
-            self.logger.error("Please setup environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET")
+            self.logger.error(
+                "Please setup environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET")
             exit(0)
 
         self.deribit = Deribit(client_id=client_id,
@@ -76,17 +78,27 @@ class MyApp:
         await self.deribit.send_public(request={
             "method": "private/subscribe",
             "params": {
-                "channels": ["book.BTC-PERPETUAL.raw",
-                             "trades.BTC-PERPETUAL.raw",
-                             "user.orders.BTC-PERPETUAL.raw",
-                             "user.trades.BTC-PERPETUAL.raw"]
+                "channels": [
+                    "deribit_price_index.btc_usd",
+                    "book.BTC-PERPETUAL.raw",
+                    "trades.BTC-PERPETUAL.raw",
+                    "user.orders.BTC-PERPETUAL.raw",
+                    "user.trades.BTC-PERPETUAL.raw"
+                ]
+            }
+        })
+
+        await self.deribit.send_public(request={
+            "method": "public/set_heartbeat",
+            "params": {
+                "interval": 15
             }
         })
 
     async def printer(self, **kwargs):
         self.logger.info(f"{repr(kwargs)}")
 
-    @staticmethod
+    @ staticmethod
     def resolve_route(value, routes):
         key, handler = None, None
         for key, handler in routes:
@@ -120,9 +132,11 @@ class MyApp:
     def on_handle_response(self, data):
         request_id = data["id"]
         if request_id in self.direct_requests:
-            self.logger.info(f"Caught response {repr(data)} to direct request {self.direct_requests[request_id]}")
+            self.logger.info(
+                f"Caught response {repr(data)} to direct request {self.direct_requests[request_id]}")
         else:
-            self.logger.error(f"Can't find request with id:{request_id} for response:{repr(data)}")
+            self.logger.error(
+                f"Can't find request with id:{request_id} for response:{repr(data)}")
 
     def handle_order_book_change(self, message):
         data = message["params"]["data"]
@@ -139,7 +153,7 @@ class MyApp:
     def handle_price_index(self, message):
         data = message["params"]["data"]
         index_name = data['index_name']
-        self.logger.debug(f"{index_name}: {repr(data)}")
+        self.logger.info(f"{index_name}: {repr(data)}")
 
     def handle_trades(self, message):
         data = message["params"]["data"]

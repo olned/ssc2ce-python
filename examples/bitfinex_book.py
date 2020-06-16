@@ -2,9 +2,11 @@
 import asyncio
 import logging
 
-from ssc2ce.bitfinex import Bitfinex, L2Book
+from ssc2ce.bitfinex import Bitfinex, BitfinexL2Book
 
-logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s',
+    level=logging.INFO)
 logger = logging.getLogger("bitfinex-basic-example")
 
 conn = Bitfinex()
@@ -12,11 +14,11 @@ conn = Bitfinex()
 
 class BookMaintainer:
     def __init__(self, instrument):
-        self.book = L2Book(instrument)
+        self.book = BitfinexL2Book(instrument)
         self.check_sum = None
         self.active = False
-        self.top_bid = [0, 0]
-        self.top_ask = [0, 0]
+        self.top_bid = 0.
+        self.top_ask = 0.
 
     async def handle_book(self, message, connector):
         if type(message[1]) is str:
@@ -29,10 +31,11 @@ class BookMaintainer:
             self.book.handle_snapshot(message)
             self.book.time = message[-1]
 
-        if self.top_ask[0] != self.book.asks[0][0] or self.top_ask[0] != self.book.asks[0][0]:
-            self.top_ask = self.book.asks[0].copy()
-            self.top_bid = self.book.bids[0].copy()
-            logger.info(f"{self.book.instrument} bid:{self.top_bid[0]} ask:{self.top_ask[0]}")
+        if self.top_ask != self.book.top_ask_price() or self.top_bid != self.book.top_bid_price():
+            self.top_ask = self.book.top_ask_price()
+            self.top_bid = self.book.top_bid_price()
+            logger.info(
+                f"{self.book.instrument()} bid:{self.top_bid} ask:{self.top_ask}")
 
 
 btc = BookMaintainer("BTC-USD")
