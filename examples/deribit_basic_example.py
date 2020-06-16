@@ -8,18 +8,21 @@ conn = Deribit()
 pending = {}
 
 
-async def handle_instruments(data: dict):
+def handle_instruments(data: dict):
     del pending[data["id"]]
-    print(json.dumps(data))
+    print("handle_instruments", json.dumps(data))
     if not pending:
-        await subscribe()
+        asyncio.ensure_future(subscribe())
 
 
-async def handle_currencies(data: dict):
+async def get_instruments(symbol):
+    request_id = await conn.get_instruments(symbol, callback=handle_instruments)
+    pending[request_id] = symbol
+
+
+def handle_currencies(data: dict):
     for currency in data["result"]:
-        symbol = currency["currency"]
-        id = await conn.get_instruments(symbol, callback=handle_instruments)
-        pending[id] = symbol
+        asyncio.ensure_future(get_instruments(currency["currency"]))
 
 
 async def get_currencies():
@@ -30,12 +33,13 @@ async def subscribe():
     await conn.send_public(request={
         "method": "public/subscribe",
         "params": {
-            "channels": ["deribit_price_index.btc_usd"]
+            "channels": ["deribit_price_index.btc_usd",
+                         "deribit_price_index.eth_usd"]
         }
     })
 
 
-async def handle_subscription(data):
+def handle_subscription(data):
     method = data.get("method")
     if method and method == "subscription":
         if data["params"]["channel"].startswith("deribit_price_index"):
