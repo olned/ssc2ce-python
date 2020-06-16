@@ -2,12 +2,15 @@
 A Set of Simple Connectors for access To Cryptocurrency Exchanges via websocket based on
  [aiohttp](https://aiohttp.readthedocs.io) .
 
+This is more of a pilot project, if you have any wishes for adding exchanges or expanding functionality, please register issues
+
 ## Installation
 Install ssc2ce with:
 ```bash
 $ pip install ssc2ce
 ```
 
+You can run some examples with  
 ## Bitfinex
 ### Description
 API description look at [Websocket API v2](https://docs.bitfinex.com/v2/docs/ws-general)
