@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='ssc2ce',
-    version="0.11.0",
+    version="0.12.0",
     author='Oleg Nedbaylo',
     author_email='olned64@gmail.com',
     description='A Set of Simple Connectors for access To Cryptocurrency Exchanges',
@@ -15,7 +15,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url='https://github.com/olned/ssc2ce-python',
     packages=setuptools.find_packages(),
-    install_requires=['aiohttp'],
+    install_requires=['aiohttp', 'sortedcontainers'],
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "License :: OSI Approved :: MIT License",
