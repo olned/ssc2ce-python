@@ -1,6 +1,8 @@
-aiohttp==3.6.2
-sortedcontainers==2.1.0
+aiohttp>=3.6
+sortedcontainers>=2.2
 
 ssc2ce_cpp
 python-dotenv
 twine
+pylint
+autopep8
