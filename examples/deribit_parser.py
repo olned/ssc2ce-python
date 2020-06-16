@@ -3,12 +3,12 @@ import logging
 from time import time
 
 from examples.book_watcher import BookWatcher
-from ssc2ce.deribit.icontroller import IDeribitController
 
 import sys
 
 if len(sys.argv) > 1 and "cpp" in sys.argv:
     from importlib import util
+
     ssc2ce_cpp_spec = util.find_spec("ssc2ce_cpp")
     if ssc2ce_cpp_spec:
         from ssc2ce_cpp import DeribitParser
@@ -22,30 +22,26 @@ logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(me
 logger = logging.getLogger("deribit-parser")
 
 
-class FileController(IDeribitController):
+class FileController:
     def __init__(self):
         self.parser = DeribitParser()
         self.counter = 0
         self.watcher = BookWatcher(self.parser, False)
 
-    async def run(self, filename: str):
+    def run(self, filename: str):
         start = time()
+        i = 0
         with open(filename) as f:
             for line in f:
-                self.parser.parse(line)
+                i += 1
+                if not self.parser.parse(line):
+                    self.handle_message(line)
 
-        logger.info(f"{self.counter} in {time()-start} sec.")
+        logger.info(f"{i} in {time() - start} sec. {self.counter}")
 
-    async def handle_method_message(self, message: dict) -> None:
+    def handle_message(self, message: str) -> None:
         self.counter += 1
-
-    async def handle_error(self, message: dict) -> None:
-        self.counter += 1
-        logger.info(message)
-
-    async def handle_response(self, request_id: int, data: dict):
-        self.counter += 1
-        # logger.info(json.dumps(data))
+        # logger.info(message[:-1])
 
 
-asyncio.run(FileController().run("dump.txt"))
+FileController().run("dump.txt")
