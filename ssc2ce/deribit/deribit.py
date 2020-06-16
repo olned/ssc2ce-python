@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 
@@ -47,6 +48,10 @@ class Deribit(SessionWrapper, IDeribitController):
 
         self.on_connect_ws = self.auth_login if auth_type != AuthType.NONE else None
         self.on_close_ws = None
+
+        self._on_message_is_routine = False
+        self._on_message = None
+
         self.on_message = self.handle_message
         self.on_authenticated = None
         self.on_token = None
@@ -75,6 +80,22 @@ class Deribit(SessionWrapper, IDeribitController):
             ("public/auth", self.handle_auth),
             ("", self.empty_handler),
         ]
+
+    @property
+    def on_message(self):
+        return self._on_message
+
+    @on_message.setter
+    def on_message(self, value):
+        self._on_message_is_routine = asyncio.iscoroutinefunction(value)
+        self._on_message = value
+
+    async def _call_on_message(self, message: str):
+        if self._on_message:
+            if self._on_message_is_routine:
+                await self._on_message(message)
+            else:
+                self._on_message(message)
 
     async def run_receiver(self):
         """
@@ -105,7 +126,7 @@ class Deribit(SessionWrapper, IDeribitController):
                 if self.on_before_handling:
                     self.on_before_handling(message.data)
 
-                await self.on_message(message.data)
+                await self._call_on_message(message.data)
             else:
                 self.logger.warning(f"Unknown type of message {repr(message)}")
 
@@ -119,7 +140,7 @@ class Deribit(SessionWrapper, IDeribitController):
         """
         await self.ws.close()
 
-    async def send_public(self, request: dict, callback=None) -> int:
+    async def send_public(self, request: dict, callback=None, logging_it: bool = True) -> int:
         """
         Send a public request
 
@@ -133,7 +154,8 @@ class Deribit(SessionWrapper, IDeribitController):
             "id": request_id,
             **request
         }
-        self.logger.info(f"sending:{repr(hide_secret(request))}")
+        if logging_it:
+            self.logger.info(f"sending:{repr(hide_secret(request))}")
         await self.ws.send_json(request)
 
         if callback:
@@ -367,7 +389,7 @@ class Deribit(SessionWrapper, IDeribitController):
                 else:
                     request_id = data["id"]
                     if request_id:
-                        await self.handle_response(request_id, data)
+                        self.handle_response(request_id, data)
             else:
                 await self.handle_method_message(data)
 
@@ -379,7 +401,7 @@ class Deribit(SessionWrapper, IDeribitController):
         """
         self.logger.debug(f"{repr(kwargs)}")
 
-    async def handle_response(self, request_id: int, response: dict) -> None:
+    def handle_response(self, request_id: int, response: dict) -> None:
         """
 
         :param request_id:
@@ -391,12 +413,18 @@ class Deribit(SessionWrapper, IDeribitController):
         if request:
             if "callback" in request:
                 callback = request["callback"]
-                await callback(response)
+                if asyncio.iscoroutinefunction(callback):
+                    asyncio.ensure_future(callback(response))
+                else:
+                    callback(response)
             else:
                 method = request["method"]
                 handler = resolve_route(method, self.response_routes)
                 if handler:
-                    return await handler(request=request, response=response)
+                    if asyncio.iscoroutinefunction(handler):
+                        asyncio.ensure_future(handler(request=request, response=response))
+                    else:
+                        handler(request=request, response=response)
 
                 self.logger.warning(f"Unhandled method:{method} response:{repr(response)} "
                                     f"to request:{repr(request)}.")
@@ -404,13 +432,15 @@ class Deribit(SessionWrapper, IDeribitController):
             del self.requests[request_id]
         else:
             if self.on_handle_response:
-                return await self.on_handle_response(response)
+                if asyncio.iscoroutinefunction(self.on_handle_response):
+                    asyncio.ensure_future(self.on_handle_response(response))
+                else:
+                    self.on_handle_response(response)
+                return
             else:
                 self.logger.warning(
                     f"Unknown id:{request_id}, the on_handle_response event must be defined."
                     f" Unhandled message {response}")
-
-        # self.logger.warning(f"Unhandled method:{method} response:{repr(response)} to request:{repr(request)}.")
 
     async def handle_method_message(self, data) -> None:
         """
@@ -433,7 +463,7 @@ class Deribit(SessionWrapper, IDeribitController):
         :return:
         """
         if data["params"]["type"] == "test_request":
-            await self.send_public({"method": "public/test", "params": {}})
+            await self.send_public({"method": "public/test", "params": {}}, logging_it=False)
 
     async def handle_auth(self, request, response) -> None:
         """
