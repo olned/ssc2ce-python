@@ -12,17 +12,13 @@ class L2BookSide:
             self.data = SortedKeyList(key=lambda val: val[0])
         self.is_bids = is_bids
         self.time = None
-        self.changes = list()
 
     def fill(self, source):
         self.data.clear()
         for item in source:
             self.add(item)
 
-    def add(self, item):
-        price = float(item[0])
-        size = float(item[1])
-        self.changes.append([price, size, size])
+    def add(self, price: float, size: float):
         self.data.add([price, size])
 
     def update(self, price: float, size: float):
@@ -33,30 +29,23 @@ class L2BookSide:
             value = self.data[i]
         else:
             if size <= VERY_SMALL_NUMBER:
-                self.changes.append([price, size, 0.0])
                 return False
 
             self.data.add([price, size])
-            self.changes.append([price, size, size])
             return True
 
         if size <= VERY_SMALL_NUMBER:
             if value[0] == price:
                 old_size = self.data[i][1]
                 self.data.discard(value)
-                self.changes.append([price, size, -old_size])
                 return True
             else:
-                self.changes.append([price, size, 0.0])
                 return False
 
         if value[0] == price:
-            old_size = self.data[i][1]
             self.data[i][1] = size
-            self.changes.append([price, size, size - old_size])
         else:
             self.data.add([price, size])
-            self.changes.append([price, size, size])
         return True
 
     def delete(self, price: float):

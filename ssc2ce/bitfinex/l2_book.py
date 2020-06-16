@@ -1,11 +1,11 @@
 import logging
-from ssc2ce.common.abstract_l2_book import AbstractL2Book
+from ssc2ce.common.l2_book import L2Book
 from collections import deque
 
 from ssc2ce.common.exceptions import BrokenOrderBook
 
 
-class L2Book(AbstractL2Book):
+class L2Book(L2Book):
     change_id = None
     timestamp = None
     logger = logging.getLogger(__name__)
