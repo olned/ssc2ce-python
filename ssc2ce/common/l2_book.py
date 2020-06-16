@@ -11,9 +11,12 @@ class L2Book:
 
         :param instrument:
         """
-        self.instrument = instrument
+        self._instrument = instrument
         self._bids = L2BookSide(is_bids=True)
         self._asks = L2BookSide(is_bids=False)
+
+    def instrument(self) -> str:
+        return self._instrument
 
     @property
     def bids(self) -> L2BookSide:
