@@ -10,10 +10,9 @@ from ssc2ce.common.exceptions import Ssc2ceError
 from ssc2ce.common import AuthType
 from ssc2ce.common.session import SessionWrapper
 from ssc2ce.common.utils import resolve_route, hide_secret, IntId
-from ssc2ce.deribit.icontroller import IDeribitController
 
 
-class Deribit(SessionWrapper, IDeribitController):
+class Deribit(SessionWrapper):
     """
     Handlers:
      - on_connect_ws - Called after the connection is established.
@@ -52,7 +51,6 @@ class Deribit(SessionWrapper, IDeribitController):
         self._on_message_is_routine = False
         self._on_message = None
 
-        self.on_message = self.handle_message
         self.on_authenticated = None
         self.on_token = None
         self.on_before_handling = None
@@ -90,13 +88,6 @@ class Deribit(SessionWrapper, IDeribitController):
         self._on_message_is_routine = asyncio.iscoroutinefunction(value)
         self._on_message = value
 
-    async def _call_on_message(self, message: str):
-        if self._on_message:
-            if self._on_message_is_routine:
-                await self._on_message(message)
-            else:
-                self._on_message(message)
-
     async def run_receiver(self):
         """
         Establish a connection and start the receiver loop.
@@ -104,7 +95,10 @@ class Deribit(SessionWrapper, IDeribitController):
         """
         self.ws = await self._session.ws_connect(self.ws_api)
         if self.on_connect_ws:
-            await self.on_connect_ws()
+            if asyncio.iscoroutinefunction(self.on_connect_ws):
+                await self.on_connect_ws()
+            else:
+                self.on_connect_ws()
 
         # A receiver loop
         while self.ws and not self.ws.closed:
@@ -126,7 +120,15 @@ class Deribit(SessionWrapper, IDeribitController):
                 if self.on_before_handling:
                     self.on_before_handling(message.data)
 
-                await self._call_on_message(message.data)
+                processed = False
+                if self._on_message:
+                    if self._on_message_is_routine:
+                        processed = await self._on_message(message.data)
+                    else:
+                        processed = self._on_message(message.data)
+
+                if not processed:
+                    self.handle_message(message.data)
             else:
                 self.logger.warning(f"Unknown type of message {repr(message)}")
 
@@ -373,7 +375,7 @@ class Deribit(SessionWrapper, IDeribitController):
 
         return await self.send_public(request=request, callback=callback)
 
-    async def handle_message(self, message: str) -> None:
+    def handle_message(self, message: str) -> None:
         """
 
         :param message:
@@ -381,19 +383,19 @@ class Deribit(SessionWrapper, IDeribitController):
         """
         data = json.loads(message)
         if "method" in data:
-            await self.handle_method_message(data)
+            self.handle_method_message(data)
         else:
             if "id" in data:
                 if "error" in data:
-                    await self.handle_error(data)
+                    self.handle_error(data)
                 else:
                     request_id = data["id"]
                     if request_id:
                         self.handle_response(request_id, data)
             else:
-                await self.handle_method_message(data)
+                self.handle_method_message(data)
 
-    async def empty_handler(self, **kwargs) -> None:
+    def empty_handler(self, **kwargs) -> None:
         """
         A default handler
         :param kwargs:
@@ -425,9 +427,9 @@ class Deribit(SessionWrapper, IDeribitController):
                         asyncio.ensure_future(handler(request=request, response=response))
                     else:
                         handler(request=request, response=response)
-
-                self.logger.warning(f"Unhandled method:{method} response:{repr(response)} "
-                                    f"to request:{repr(request)}.")
+                else:
+                    self.logger.warning(f"Unhandled method:{method} response:{repr(response)} "
+                                        f"to request:{repr(request)}.")
 
             del self.requests[request_id]
         else:
@@ -442,7 +444,7 @@ class Deribit(SessionWrapper, IDeribitController):
                     f"Unknown id:{request_id}, the on_handle_response event must be defined."
                     f" Unhandled message {response}")
 
-    async def handle_method_message(self, data) -> None:
+    def handle_method_message(self, data) -> None:
         """
 
         :param data:
@@ -452,20 +454,20 @@ class Deribit(SessionWrapper, IDeribitController):
         handler = resolve_route(method, self.method_routes)
 
         if handler:
-            return await handler(data)
+            handler(data)
         elif not self.on_before_handling:
             self.logger.warning(f"Unhandled message:{repr(data)}.")
 
-    async def handle_heartbeat(self, data):
+    def handle_heartbeat(self, data):
         """
 
         :param data:
         :return:
         """
         if data["params"]["type"] == "test_request":
-            await self.send_public({"method": "public/test", "params": {}}, logging_it=False)
+            asyncio.ensure_future(self.send_public({"method": "public/test", "params": {}}, logging_it=False))
 
-    async def handle_auth(self, request, response) -> None:
+    def handle_auth(self, request, response) -> None:
         """
 
         :param request:
@@ -476,19 +478,19 @@ class Deribit(SessionWrapper, IDeribitController):
         grant_type = request["params"]["grant_type"]
         if grant_type == "":
             if self.on_token:
-                await self.on_token(response["result"])
+                self.on_token(response["result"])
         elif grant_type in ("client_credentials", "password"):
             # TODO - Why we use two handlers?
             if self.on_authenticated:
-                await self.on_authenticated()
+                self.on_authenticated()
             if self.on_token:
-                await self.on_token(response["result"])
+                self.on_token(response["result"])
         elif grant_type == "client_signature":
             pass
         else:
             self.logger.error(f"Unknown grant_type {repr(hide_secret(request))} : {repr(hide_secret(response))}")
 
-    async def handle_error(self, message):
+    def handle_error(self, message):
         if self.on_response_error:
             self.on_response_error(message)
         else:
