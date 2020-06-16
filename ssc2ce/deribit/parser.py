@@ -2,8 +2,6 @@ import asyncio
 import json
 import logging
 
-from ssc2ce.deribit.icontroller import IDeribitController
-
 from ssc2ce.deribit.l2_book import DeribitL2Book, L2Book
 from ssc2ce.common.exceptions import BrokenOrderBook
 
