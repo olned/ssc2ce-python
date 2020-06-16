@@ -10,14 +10,14 @@ class BookWatcher:
 
     def handle_book_setup(self, book: L2Book):
         top = [book.top_bid_price(), book.top_ask_price()]
-        self.betters[book.instrument] = top
+        self.betters[book.instrument()] = top
         if self.print_it:
-            print(f"{book.instrument} bid:{top[0]} ask:{top[1]}")
+            print(f"{book.instrument()} bid:{top[0]} ask:{top[1]}")
 
     def handle_book_update(self, book: L2Book):
-        top = self.betters[book.instrument]
+        top = self.betters[book.instrument()]
         if top[1] != book.top_ask_price() or top[0] != book.top_bid_price():
             top[1] = book.top_ask_price()
             top[0] = book.top_bid_price()
             if self.print_it:
-                print(f"{book.instrument} bid:{top[0]} ask:{top[1]}")
+                print(f"{book.instrument()} bid:{top[0]} ask:{top[1]}")
