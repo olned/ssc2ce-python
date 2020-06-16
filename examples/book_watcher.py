@@ -2,19 +2,22 @@ from ssc2ce.deribit.l2_book import L2Book
 
 
 class BookWatcher:
-    def __init__(self, parser):
+    def __init__(self, parser, print_it: bool = True):
         self.betters = {}
-        parser.on_book_setup = self.handle_book_setup
-        parser.on_book_update = self.handle_book_update
+        self.print_it = print_it
+        parser.set_on_book_setup(self.handle_book_setup)
+        parser.set_on_book_update(self.handle_book_update)
 
-    async def handle_book_setup(self, book: L2Book):
-        top = [book.bids[0][0], book.asks[0][0]]
+    def handle_book_setup(self, book: L2Book):
+        top = [book.top_bid_price(), book.top_ask_price()]
         self.betters[book.instrument] = top
-        print(f"{book.instrument} bid:{top[0]} ask:{top[1]}")
-
-    async def handle_book_update(self, book: L2Book):
-        top = self.betters[book.instrument]
-        if top[1] != book.asks[0][0] or top[0] != book.bids[0][0]:
-            top[1] = book.asks[0][0]
-            top[0] = book.bids[0][0]
+        if self.print_it:
             print(f"{book.instrument} bid:{top[0]} ask:{top[1]}")
+
+    def handle_book_update(self, book: L2Book):
+        top = self.betters[book.instrument]
+        if top[1] != book.top_ask_price() or top[0] != book.top_bid_price():
+            top[1] = book.top_ask_price()
+            top[0] = book.top_bid_price()
+            if self.print_it:
+                print(f"{book.instrument} bid:{top[0]} ask:{top[1]}")
