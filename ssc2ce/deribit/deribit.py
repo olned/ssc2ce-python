@@ -2,8 +2,6 @@ import asyncio
 import json
 import logging
 
-from time import time
-
 import aiohttp
 
 from ssc2ce.common.exceptions import Ssc2ceError
@@ -14,6 +12,7 @@ from ssc2ce.common.utils import resolve_route, hide_secret, IntId
 
 class Deribit(SessionWrapper):
     """
+
     Handlers:
      - on_connect_ws - Called after the connection is established.
             If auth_type is not equivalent to AuthType.NONE,
@@ -43,13 +42,8 @@ class Deribit(SessionWrapper):
 
         super().__init__()
 
-        self.ws: aiohttp.ClientWebSocketResponse = None
-
-        self.on_connect_ws = self.auth_login if auth_type != AuthType.NONE else None
-        self.on_close_ws = None
-
-        self._on_message_is_routine = False
-        self._on_message = None
+        if auth_type != AuthType.NONE:
+            self.on_connect_ws = self.auth_login
 
         self.on_authenticated = None
         self.on_token = None
@@ -78,59 +72,6 @@ class Deribit(SessionWrapper):
             ("public/auth", self.handle_auth),
             ("", self.empty_handler),
         ]
-
-    @property
-    def on_message(self):
-        return self._on_message
-
-    @on_message.setter
-    def on_message(self, value):
-        self._on_message_is_routine = asyncio.iscoroutinefunction(value)
-        self._on_message = value
-
-    async def run_receiver(self):
-        """
-        Establish a connection and start the receiver loop.
-        :return:
-        """
-        self.ws = await self._session.ws_connect(self.ws_api)
-        if self.on_connect_ws:
-            if asyncio.iscoroutinefunction(self.on_connect_ws):
-                await self.on_connect_ws()
-            else:
-                self.on_connect_ws()
-
-        # A receiver loop
-        while self.ws and not self.ws.closed:
-            message = await self.ws.receive()
-            self.receipt_time = time()
-            self.last_message = message
-
-            if message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.ERROR):
-                self.logger.warning(f"Connection close {repr(message)}")
-                if self.on_close_ws:
-                    await self.on_close_ws()
-
-                continue
-            if message.type == aiohttp.WSMsgType.CLOSING:
-                self.logger.debug(f"Connection closing {repr(message)}")
-                continue
-
-            if message.type == aiohttp.WSMsgType.TEXT:
-                if self.on_before_handling:
-                    self.on_before_handling(message.data)
-
-                processed = False
-                if self._on_message:
-                    if self._on_message_is_routine:
-                        processed = await self._on_message(message.data)
-                    else:
-                        processed = self._on_message(message.data)
-
-                if not processed:
-                    self.handle_message(message.data)
-            else:
-                self.logger.warning(f"Unknown type of message {repr(message)}")
 
     def close(self):
         super()._close()

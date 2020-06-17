@@ -22,8 +22,6 @@ else:
 conn = Deribit()
 parser = DeribitParser()
 watcher = BookWatcher(parser)
-
-# parser.set_on_unprocessed_message(conn.handle_message)
 conn.on_message = parser.parse
 
 pending = {}

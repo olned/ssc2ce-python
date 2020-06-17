@@ -1,6 +1,7 @@
-from .deribit import Deribit
+from .deribit import Deribit, DeribitParser, DeribitL2Book
 from .common import AuthType
-from .bitfinex import Bitfinex
+from .bitfinex import Bitfinex, BitfinexL2Book
+from .coinbase import Coinbase, CoinbaseParser, CoinbaseL2Book
 
 from pkg_resources import get_distribution, DistributionNotFound
 try:
