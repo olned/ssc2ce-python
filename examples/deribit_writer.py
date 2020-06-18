@@ -25,7 +25,7 @@ async def handle_instruments(data: dict):
 
     if not pending:
         print(instruments)
-        await subscribe_books(instruments)
+        await subscribe_books()
 
 
 async def handle_book_summary_by_currency(data: dict):
@@ -50,7 +50,8 @@ async def get_currencies():
     await conn.get_currencies(handle_currencies)
 
 
-async def subscribe_books(instruments: list):
+async def subscribe_books():
+    global instruments
     await conn.send_public(request={
         "method": "public/subscribe",
         "params": {
@@ -66,7 +67,7 @@ async def subscribe_books(instruments: list):
     })
 
 
-output = open("dump.txt", "w")
+output = open("deribit_dump.txt", "w")
 
 
 def dump(msg: str):

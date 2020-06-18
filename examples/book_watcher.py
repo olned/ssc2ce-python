@@ -1,8 +1,9 @@
+from ssc2ce.common.abstract_parser import AbstractParser
 from ssc2ce.deribit.l2_book import L2Book
 
 
 class BookWatcher:
-    def __init__(self, parser, print_it: bool = True):
+    def __init__(self, parser: AbstractParser, print_it: bool = True):
         self.betters = {}
         self.print_it = print_it
         parser.set_on_book_setup(self.handle_book_setup)

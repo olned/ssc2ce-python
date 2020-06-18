@@ -1,3 +1,5 @@
+import asyncio
+import json
 import logging
 from time import time
 
@@ -10,6 +12,8 @@ from enum import IntEnum
 
 
 class Bitfinex(SessionWrapper):
+    _on_received_info: None
+
     class ConfigFlag(IntEnum):
         TIMESTAMP = 32768
         SEQ_ALL = 65536
@@ -19,16 +23,9 @@ class Bitfinex(SessionWrapper):
         MAINTENANCE = 0
         OPERATIVE = 1
 
-    ws: aiohttp.ClientWebSocketResponse = None
-    on_connect_ws = None
-    on_close_ws = None
     on_maintenance = None
     on_conf = None
     receipt_time = None
-
-    ws_api = 'wss://api-pub.bitfinex.com/ws/2'
-
-    last_message = None
     is_connected = False
     subscriptions = []
     channel_handlers = {}
@@ -37,21 +34,16 @@ class Bitfinex(SessionWrapper):
                  flags: ConfigFlag = ConfigFlag.TIMESTAMP | ConfigFlag.SEQ_ALL):
         super().__init__()
 
+        self.ws_api = 'wss://api-pub.bitfinex.com/ws/2'
         self.flags = flags
         self.logger = logging.getLogger(__name__)
-
         self._timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=20)
-
-        self.on_message = self.handle_message
-        # self.on_connect = self.configure
         self.routes = [
             ("subscribed", self.handle_subscribed),
             ("info", self.handle_info),
             ("conf", self.handle_conf),
             # ("", self.warn_handler),
         ]
-
-        # self.channel_route = []
 
     async def configure(self, flags: ConfigFlag = None):
         if flags is not None:
@@ -69,52 +61,40 @@ class Bitfinex(SessionWrapper):
             **request
         })
 
-    async def run_receiver(self):
-        self.ws = await self._session.ws_connect(self.ws_api)
+    @property
+    def on_connect_ws(self):
+        return None
 
-        while self.ws and not self.ws.closed:
-            message = await self.ws.receive()
-            self.receipt_time = time()
-            self.last_message = message
+    @on_connect_ws.setter
+    def on_connect_ws(self, value):
+        self._on_connect_ws_is_routine = asyncio.iscoroutinefunction(value)
+        self._on_received_info = value
 
-            if message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.ERROR):
-                self.logger.warning(f"Connection close {repr(message)}")
-                if self.on_close_ws:
-                    await self.on_close_ws()
+    def handle_message(self, message: str):
+        data = json.loads(message)
 
-                continue
-            if message.type == aiohttp.WSMsgType.CLOSING:
-                self.logger.debug(f"Connection closing {repr(message)}")
-                continue
-
-            if self.on_message:
-                await self.on_message(message)
-
-    async def handle_message(self, message: aiohttp.WSMessage):
-        if message.type == aiohttp.WSMsgType.TEXT:
-            data = message.json()
-
-            if isinstance(data, list):
-                channel_id = data[0]
-                handler = self.channel_handlers.get(channel_id)
-                if handler:
-                    await handler(data, self)
-                else:
-                    self.logger.warning(f"Can't find handler for channel_id{channel_id}, {data}")
-            elif isinstance(data, dict):
-                if "event" in data:
-                    await self.handle_event(data)
-                else:
-                    self.logger.warning(f"Unknown message {message.data}")
+        if isinstance(data, list):
+            channel_id = data[0]
+            handler = self.channel_handlers.get(channel_id)
+            if handler:
+                handler(data, self)
             else:
-                self.logger.warning(f"Unknown message {message.data}")
+                self.logger.warning(f"Can't find handler for channel_id{channel_id}, {message}")
+        elif isinstance(data, dict):
+            if "event" in data:
+                if asyncio.iscoroutinefunction(self.handle_event):
+                    asyncio.ensure_future(self.handle_event(data))
+                else:
+                    self.handle_event(data)
+            else:
+                self.logger.warning(f"Unknown message {message}")
         else:
-            self.logger.warning(f"Unknown type of message {repr(message)}")
+            self.logger.warning(f"Unknown message {message}")
 
     async def empty_handler(self, data):
         pass
 
-    async def handle_subscribed(self, message):
+    def handle_subscribed(self, message):
         self.logger.info(f"receive subscribed: {message}")
         idx = None
         for i, s in enumerate(self.subscriptions):
@@ -125,13 +105,13 @@ class Bitfinex(SessionWrapper):
         if idx:
             del self.subscriptions[idx]
 
-    async def handle_conf(self, message):
+    def handle_conf(self, message):
         """{'event': 'conf', 'status': 'OK', 'flags': 98304}"""
         self.logger.info(f"{message}")
         if self.on_conf:
-            await self.on_conf()
+            self.on_conf()
 
-    async def handle_info(self, message):
+    def handle_info(self, message):
         """
         Handle an info message that contains the actual version of the websocket stream, along with a platform status
         flag (1 for operative, 0 for maintenance
@@ -147,27 +127,30 @@ class Bitfinex(SessionWrapper):
 
         if message["platform"]["status"] == 1:
             if not self.is_connected:
-                await self.configure()
-                if self.on_connect_ws:
-                    await self.on_connect_ws()
+                asyncio.ensure_future(self.configure())
+                if self._on_received_info:
+                    if self._on_connect_ws_is_routine:
+                        asyncio.ensure_future(self._on_received_info())
+                    else:
+                        self._on_received_info()
             else:
                 if self.on_maintenance:
-                    await self.on_maintenance(message)
+                    asyncio.ensure_future(self.on_maintenance(message))
         else:
             if self.on_maintenance:
-                await self.on_maintenance(message)
+                asyncio.ensure_future(self.on_maintenance(message))
 
-    async def warn_handler(self, message):
+    def warn_handler(self, message):
         self.logger.warning(f"Unsupported message {message}")
 
-    async def handle_event(self, message):
+    def handle_event(self, message):
         event = message["event"]
         handler = resolve_route(event, self.routes)
 
         if handler:
-            return await handler(message)
-
-        self.logger.warning(f"Unhandled event:{event}, message:{repr(message)} .")
+            handler(message)
+        else:
+            self.logger.warning(f"Unhandled event:{event}, message:{repr(message)} .")
         return
 
     def close(self):
