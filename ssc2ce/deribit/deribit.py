@@ -395,7 +395,11 @@ class Deribit(SessionWrapper):
         handler = resolve_route(method, self.method_routes)
 
         if handler:
-            handler(data)
+            if asyncio.iscoroutinefunction(handler):
+                asyncio.ensure_future(handler(data))
+            else:
+                handler(data)
+
         elif not self.on_before_handling:
             self.logger.warning(f"Unhandled message:{repr(data)}.")
 
