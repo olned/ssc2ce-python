@@ -2,27 +2,20 @@ import asyncio
 import json
 import logging
 
+from ssc2ce.common.abstract_parser import AbstractParser
 from ssc2ce.deribit.l2_book import DeribitL2Book, L2Book
 from ssc2ce.common.exceptions import BrokenOrderBook
 
 
-class DeribitParser:
+class DeribitParser(AbstractParser):
     """
 
     """
 
     def __init__(self):
-        self._on_book_setup = None
-        self._on_book_update = None
         self.logger = logging.getLogger(__name__)
         self.deprecated_already_warn = False
         self.books = {}
-
-    def set_on_book_setup(self, handler) -> None:
-        self._on_book_setup = handler
-
-    def set_on_book_update(self, handler) -> None:
-        self._on_book_update = handler
 
     async def handle_message(self, message):
         if not self.deprecated_already_warn:

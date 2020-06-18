@@ -2,15 +2,15 @@ import json
 import logging
 from typing import Callable
 
-from ssc2ce.coinbase.l2_book import L2Book
+from ssc2ce.coinbase_pro.l2_book import L2Book
+from ssc2ce.common.abstract_parser import AbstractParser
 
 
-class CoinbaseParser:
+class CoinbaseParser(AbstractParser):
     """
 
     """
-    _on_book_update: Callable[[L2Book], bool] = None
-    _on_book_setup: Callable[[L2Book], bool] = None
+
     _on_subscriptions: Callable[[dict], bool] = None
     _on_heartbeat: Callable[[dict], bool] = None
 
@@ -24,12 +24,6 @@ class CoinbaseParser:
             "subscriptions": self.handle_subscriptions,
             "heartbeat": self.handle_heartbeat
         }
-
-    def set_on_book_setup(self, handler) -> None:
-        self._on_book_setup = handler
-
-    def set_on_book_update(self, handler) -> None:
-        self._on_book_update = handler
 
     def set_on_subscriptions(self, handler) -> None:
         self._on_subscriptions = handler
