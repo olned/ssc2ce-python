@@ -9,7 +9,7 @@ import aiohttp
 from ssc2ce.common.exceptions import Ssc2ceError
 from ssc2ce.common import AuthType
 from ssc2ce.common.session import SessionWrapper
-from ssc2ce.common.utils import resolve_route, hide_secret, IntId
+from aiohttp import ClientResponseError
 
 
 class Coinbase(SessionWrapper):
@@ -39,3 +39,25 @@ class Coinbase(SessionWrapper):
             else "https://api.pro.coinbase.com"
         self.sandbox = sandbox
 
+    async def public_get(self, request_path, params=None):
+        async with self._session.get(url=self.rest_api + request_path,
+                                     params=params,
+                                     headers=None) as response:
+            if response.status == 200:
+                return await response.json()
+            else:
+                response.raise_for_status()
+
+    async def get_currencies(self):
+        try:
+            return await self.public_get("/currencies")
+        except ClientResponseError as e:
+            self.logger.error(e.message)
+            return []
+
+    async def get_products(self):
+        try:
+            return await self.public_get("/products")
+        except ClientResponseError as e:
+            self.logger.error(e.message)
+            return []
