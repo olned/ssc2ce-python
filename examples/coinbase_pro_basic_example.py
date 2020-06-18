@@ -2,16 +2,18 @@
 import asyncio
 import logging
 
-from examples.book_watcher import BookWatcher
-from ssc2ce import Coinbase, CoinbaseParser
+from ssc2ce import Coinbase
 
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
 logger = logging.getLogger("bitfinex-basic-example")
 
+
+def handle_message(message: str):
+    logger.info(message)
+
+
 conn = Coinbase()
-parser = CoinbaseParser()
-watcher = BookWatcher(parser)
-conn.on_message = parser.parse
+conn.on_message = handle_message
 
 
 async def subscribe():
@@ -28,23 +30,14 @@ async def subscribe():
     })
 
 
-def handle_subscriptions(data: dict) -> bool:
-    print("subscriptions", data["channels"])
-    return True
-
-
-last_time: str = None
-
-
 def handle_heartbeat(data: dict) -> bool:
     global last_time
     last_time = data["time"]
+    logger.info(f"{repr(data)}")
     return True
 
 
 conn.on_connect_ws = subscribe
-parser.set_on_heartbeat(handle_heartbeat)
-parser.set_on_subscriptions(handle_subscriptions)
 
 
 def stop():
@@ -57,6 +50,4 @@ loop.call_later(3600, stop)
 try:
     loop.run_until_complete(conn.run_receiver())
 except KeyboardInterrupt:
-    print("Application closed by KeyboardInterrupt.")
-
-print(last_time)
+    logger.info("Application closed by KeyboardInterrupt.")
