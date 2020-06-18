@@ -145,4 +145,4 @@ class SessionWrapper:
                 self.logger.warning(f"Unknown type of message {repr(message)}")
 
     def handle_message(self, message: str):
-        self.logger.warning(f"Unhandled message {message}")
+        pass
