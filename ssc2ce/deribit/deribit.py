@@ -24,6 +24,7 @@ class Deribit(SessionWrapper):
      - on_handle_response - Called when the message from the exchange does not contain the request id;
      - on_response_error - Called when the response contains an error message.
     """
+    auth_params: dict = None
 
     def __init__(self,
                  client_id: str = None,
@@ -53,7 +54,6 @@ class Deribit(SessionWrapper):
 
         self.receipt_time = None
         self.requests = {}
-        self.auth_params: dict = None
         self.last_message = None
         self.ws_api = f"wss://{'test' if testnet else 'www'}.deribit.com/ws/api/v2/"
         self.get_id = get_id
@@ -89,6 +89,7 @@ class Deribit(SessionWrapper):
 
         :param request: Request without jsonrpc and id fields
         :param callback: The function that will be called after receiving the query result. Default is None
+        :param logging_it:
         :return: Request Id
         """
         request_id = self.get_id()
@@ -303,6 +304,7 @@ class Deribit(SessionWrapper):
         Send a request for a list available trading instruments
         :param currency: The currency symbol: BTC or ETH
         :param kind: Instrument kind: future or option, if not provided instruments of all kinds are considered
+        :param expired:
         :param callback:
         :return: Request Id
         """
@@ -395,7 +397,11 @@ class Deribit(SessionWrapper):
         handler = resolve_route(method, self.method_routes)
 
         if handler:
-            handler(data)
+            if asyncio.iscoroutinefunction(handler):
+                asyncio.ensure_future(handler(data))
+            else:
+                handler(data)
+
         elif not self.on_before_handling:
             self.logger.warning(f"Unhandled message:{repr(data)}.")
 
