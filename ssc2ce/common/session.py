@@ -1,5 +1,7 @@
 import asyncio
+import json
 import logging
+from typing import Callable, Any, Coroutine, Awaitable, Optional
 
 import aiohttp
 from time import time
@@ -24,30 +26,30 @@ class SessionWrapper:
     __is_session: bool = False
     __session: aiohttp.ClientSession = None
     _timeout: aiohttp.ClientTimeout = None
-    ws: aiohttp.ClientWebSocketResponse = None
+
+    _on_connect: Optional[Callable[[], Any]] = None
+    _async_on_connect: Optional[Callable[[], Awaitable[Any]]] = None
+
+    _on_message: Optional[Callable[[str], bool]] = None
+    _async_on_message: Optional[Callable[[str], Awaitable[bool]]] = None
+
+    on_close_ws: Callable[[], Any] = None
+    on_before_handling: Callable[[str], Any] = None
+
+    ws_api: str
+    rest_api: str
+    ws: aiohttp.ClientWebSocketResponse
+    last_message: str
+    receipt_time: float
 
     def __init__(self, timeout: aiohttp.ClientTimeout = None, session: aiohttp.ClientSession = None):
         if session:
             self._session = session
             self.__internal_session = False
 
-        if timeout:
-            self._timeout = timeout
-        else:
-            self._timeout = aiohttp.ClientTimeout(total=20)
+        self._timeout = timeout if timeout else aiohttp.ClientTimeout(total=20)
 
-        self._on_message_is_routine = False
-        self._on_message = None
-
-        self._on_connect_ws_is_routine = None
-        self._on_connect_ws = None
-        self.on_close_ws = None
-        self.on_before_handling = None
-
-        self.ws_api = None
         self.logger = logging.getLogger(__name__)
-        self.receipt_time = None
-        self.last_message = None
 
     @property
     def _session(self):
@@ -87,18 +89,35 @@ class SessionWrapper:
         return self._on_message
 
     @on_message.setter
-    def on_message(self, value):
-        self._on_message_is_routine = asyncio.iscoroutinefunction(value)
-        self._on_message = value
+    def on_message(self, handler):
+        if handler is None:
+            self._async_on_message = None
+            self._on_message = None
+        else:
+            if asyncio.iscoroutinefunction(handler):
+                self._async_on_message = handler
+            else:
+                self._on_message = handler
 
     @property
     def on_connect_ws(self):
-        return self._on_connect_ws
+        if self._async_on_connect:
+            return self._async_on_connect
+        else:
+            return self._on_connect
 
     @on_connect_ws.setter
-    def on_connect_ws(self, value):
-        self._on_connect_ws_is_routine = asyncio.iscoroutinefunction(value)
-        self._on_connect_ws = value
+    def on_connect_ws(self, handler):
+        if handler is None:
+            self._async_on_connect = None
+            self._on_connect = None
+        else:
+            if asyncio.iscoroutinefunction(handler):
+                self._async_on_connect = handler
+                self._on_connect = None
+            else:
+                self._async_on_connect = None
+                self._on_connect = handler
 
     async def run_receiver(self):
         """
@@ -106,17 +125,15 @@ class SessionWrapper:
         :return:
         """
         self.ws = await self._session.ws_connect(self.ws_api)
-        if self.on_connect_ws:
-            if asyncio.iscoroutinefunction(self.on_connect_ws):
-                await self.on_connect_ws()
-            else:
-                self.on_connect_ws()
+        if self._async_on_connect:
+            await self._async_on_connect()
+        elif self._on_connect:
+            self._on_connect()
 
         # A receiver loop
         while self.ws and not self.ws.closed:
             message = await self.ws.receive()
             self.receipt_time = time()
-            self.last_message = message
 
             if message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.ERROR):
                 self.logger.warning(f"Connection close {repr(message)}")
@@ -129,15 +146,15 @@ class SessionWrapper:
                 continue
 
             if message.type == aiohttp.WSMsgType.TEXT:
+                self.last_message = message.data
                 if self.on_before_handling:
                     self.on_before_handling(message.data)
 
                 processed = False
-                if self._on_message:
-                    if self._on_message_is_routine:
-                        processed = await self._on_message(message.data)
-                    else:
-                        processed = self._on_message(message.data)
+                if self._async_on_message:
+                    processed = await self._async_on_message(message.data)
+                elif self._on_message:
+                    processed = self._on_message(message.data)
 
                 if not processed:
                     self.handle_message(message.data)
@@ -146,3 +163,19 @@ class SessionWrapper:
 
     def handle_message(self, message: str):
         pass
+
+    async def public_get(self, request_path, params=None):
+        async with self._session.get(url=self.rest_api + request_path,
+                                     params=params,
+                                     headers=None) as response:
+            if response.status == 200:
+                if response.content_type == 'text/json':
+                    data = await response.read()
+                    data = json.loads(data)
+                    return data
+            else:
+                response.raise_for_status()
+
+    async def stop(self):
+        await self.ws.close()
+        await self._session.close()
