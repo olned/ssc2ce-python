@@ -16,17 +16,7 @@ def resolve_route(value, routes):
         return handler
 
 
-def hide_secret(request):
-    data = request.copy()
-    hidden_keys = ["password", "username", "client_id", "client_secret", "refresh_token", "access_token"]
 
-    for key, value in data.items():
-        if isinstance(value, dict):
-            data[key] = hide_secret(value)
-        elif key in hidden_keys:
-            data[key] = "***"
-
-    return data
 
 
 class IntId:
