@@ -35,3 +35,6 @@ class L2Book:
 
     def top_bid_price(self):
         return self._bids.data[0][0]
+
+    def valid(self) -> bool:
+        return len(self._asks.data) != 0 and len(self._bids.data) != 0
