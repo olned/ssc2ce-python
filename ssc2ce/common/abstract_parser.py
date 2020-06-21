@@ -12,8 +12,8 @@ class AbstractParser(ABC):
     """
 
     """
-    _on_book_update: Callable[[L2Book], bool] = None
-    _on_book_setup: Callable[[L2Book], bool] = None
+    _on_book_update: Callable[[L2Book], None]
+    _on_book_setup: Callable[[L2Book], None]
 
     def __init__(self):
         pass

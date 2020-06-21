@@ -1,9 +1,9 @@
-import asyncio
 import json
 import logging
+from typing import Callable, Dict
 
 from ssc2ce.common.abstract_parser import AbstractParser
-from ssc2ce.cex.l2_book import CexL2Book, L2Book
+from ssc2ce.cex.l2_book import CexL2Book
 from ssc2ce.common.exceptions import BrokenOrderBook
 
 
@@ -12,107 +12,96 @@ class CexParser(AbstractParser):
 
     """
 
+    _routes: Dict[str, Callable[[dict], None]]
+
     def __init__(self):
+        AbstractParser.__init__(self)
+        self._routes = {
+            # 'auth', self.handle_auth,
+            # 'balance', self.handle_balance,
+            # 'disconnecting', self.handle_disconnecting,
+            # 'get-balance', self.handle_get_balance,
+            'md_update': self.handle_md_update,
+            # 'obalance', self.handle_obalance,
+            # 'open-orders', self.handle_open_orders,
+            # 'order', self.handle_order,
+            'order-book-subscribe': self.handle_order_book_subscribe,
+            # 'order-book-unsubscribe': self.handle_order_book_unsubscribe,
+            # 'ping': self.handle_ping,
+            # 'tick': self.handle_tick,
+            # 'tx', self.handle_tx,
+        }
         self.logger = logging.getLogger(__name__)
-        self.deprecated_already_warn = False
         self.books = {}
 
-    @property
-    def on_connect_ws(self):
-        return None
-
-    @on_connect_ws.setter
-    def on_connect_ws(self, value):
-        self._on_connect_ws_is_routine = asyncio.iscoroutinefunction(value)
-        self._on_received_info = value
-
-    async def handle_message(self, message):
-        if not self.deprecated_already_warn:
-            self.deprecated_already_warn = True
-            self.logger.warning("The handle_message method of DeribitParser is deprecated, please use parse instead")
-        self.parse(message)
-
-    def parse(self, message) -> bool:
+    def parse(self, message: str) -> bool:
         data = json.loads(message)
+        message_type = data.get('e')
+        processed: bool = False
 
-        return self.handle_method_message(data)
-
-    def handle_method_message(self, data: dict) -> bool:
-        method = data.get("method")
-        processed = False
-        if method and method == "subscription":
-            params = data["params"]
-            channel = params["channel"]
-            if channel.startswith("book."):
-                params_data = params["data"]
-                instrument = params_data["instrument_name"]
-                book = self.get_book(instrument)
-
-                if "prev_change_id" in params_data:
-                    self.handle_update(book, params_data)
-                    if self._on_book_update:
-                        self._on_book_update(book)
-                else:
-                    self.handle_snapshot(book, params_data)
-                    if self._on_book_setup:
-                        self._on_book_setup(book)
-
+        if message_type:
+            handler = self._routes.get(message_type)
+            if handler:
+                handler(data)
                 processed = True
+        else:
+            self.logger.error(message)
 
         return processed
 
-    def get_book(self, instrument: str) -> L2Book:
-        book: L2Book = self.books.get(instrument)
+    def get_book(self, instrument: str) -> CexL2Book:
+        book: CexL2Book = self.books.get(instrument)
         if book is None:
-            book = L2Book(instrument)
+            book = CexL2Book(instrument)
             self.books[instrument] = book
 
         return book
 
-    @staticmethod
-    def handle_snapshot(book: CexL2Book, message: dict) -> None:
+    def handle_order_book_subscribe(self, message: dict) -> None:
         """
 
-        :param book:
         :param message:
         :return:
         """
+        ok = message.get('ok')
+        if ok != 'ok':
+            self.logger.error(message)
+            return
+
+        data = message["data"]
+        book = self.get_book(data["pair"])
         book.clear()
+        book.sequence = data["id"]
+        book.time = data["timestamp"]
 
-        book.change_id = message["change_id"]
-        book.timestamp = message["timestamp"]
-        for i in message['bids']:
-            book.bids.add(i[1], i[2])
+        for price, size in data['bids']:
+            book.bids.add(price, size)
 
-        for i in message['asks']:
-            book.asks.add(i[1], i[2])
+        for price, size in data['asks']:
+            book.asks.add(price, size)
 
-    @staticmethod
-    def handle_update(book: CexL2Book, message: dict) -> None:
+        if self._on_book_setup:
+            self._on_book_setup(book)
+
+    def handle_md_update(self, message: dict) -> None:
         """
 
-        :param book:
         :param message:
         :return:
         """
-        prev_change_id = message["prev_change_id"]
-        if prev_change_id != book.change_id:
-            raise BrokenOrderBook(book.instrument, prev_change_id, book.change_id)
 
-        book.change_id = message["change_id"]
-        book.timestamp = message["timestamp"]
-        for change in message['bids']:
-            if change[0] == 'new':
-                book.bids.add(price=change[1], size=change[2])
-            elif change[0] == 'delete':
-                book.bids.delete(change[1])
-            else:
-                book.bids.update(price=change[1], size=change[2])
+        data = message["data"]
+        book = self.get_book(data["pair"])
+        book.sequence += 1
+        if book.sequence != data["id"]:
+            raise BrokenOrderBook(data["pair"], book.sequence - 1, data["id"])
 
-        for change in message['asks']:
-            if change[0] == 'new':
-                book.asks.add(price=change[1], size=change[2])
-            elif change[0] == 'delete':
-                book.asks.delete(change[1])
-            else:
-                book.asks.update(price=change[1], size=change[2])
+        book.time = data["time"]
+        for price, size in data['bids']:
+            book.bids.update(price, size)
+
+        for price, size in data['asks']:
+            book.bids.update(price, size)
+
+        if self._on_book_update and book.valid():
+            self._on_book_update(book)
