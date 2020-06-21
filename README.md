@@ -93,7 +93,7 @@ except KeyboardInterrupt:
 If you clone repository you can run examples from the root directory.
 
 ```bash
-$ PYTHONPATH=.:$PYTHONPATH python examples/bitfinex_basic_example.py
+$ PYTHONPATH=.:$PYTHONPATH python examples/bitfinex/bitfinex_basic_example.py
 ```
 
 To run some examples, you may need additional modules, you can install them from the `requirements.txt` file.
@@ -105,5 +105,5 @@ $ pip install -r requirements.txt
 To run the private.py example, you must either fill in the .env file or set the environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET. Look at .env_default. 
 
 ```bash
-$ PYTHONPATH=.:$PYTHONPATH DERIBIT_CLIENT_ID=YOU_ACCESS_KEY DERIBIT_CLIENT_SECRET=YOU_ACCESS_SECRET python examples/deribit_private.py
+$ PYTHONPATH=.:$PYTHONPATH DERIBIT_CLIENT_ID=YOU_ACCESS_KEY DERIBIT_CLIENT_SECRET=YOU_ACCESS_SECRET python examples/deribit/deribit_private.py
 ```

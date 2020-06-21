@@ -1,11 +1,8 @@
-import asyncio
 import logging
 import argparse
 from time import time
 
-from examples.book_watcher import BookWatcher
-
-import sys
+from examples.common.book_watcher import BookWatcher
 
 from ssc2ce import create_parser
 
@@ -13,7 +10,7 @@ logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(me
 logger = logging.getLogger("deribit-parser")
 
 
-class FileController:
+class FileReader:
     def __init__(self, exchange: str, is_cpp: bool):
 
         self.parser = create_parser(exchange, is_cpp)
@@ -36,7 +33,6 @@ class FileController:
 
     def handle_message(self, message: str) -> None:
         self.counter += 1
-        # logger.info(message[:-1])
 
 
 def main():
@@ -55,7 +51,7 @@ def main():
 
     args = parser.parse_args()
 
-    FileController(args.exchange, args.is_cpp).run(args.file)
+    FileReader(args.exchange, args.is_cpp).run(args.file)
 
 
 if __name__ == '__main__':

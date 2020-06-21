@@ -4,7 +4,7 @@ import json
 import logging
 import sys
 
-from examples.book_watcher import BookWatcher
+from examples.common.book_watcher import BookWatcher
 from ssc2ce import Deribit
 
 if len(sys.argv) > 1 and "cpp" in sys.argv:

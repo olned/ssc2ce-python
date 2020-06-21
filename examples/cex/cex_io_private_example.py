@@ -20,6 +20,14 @@ auth_param = dict(apiKey=os.environ.get('CEX_API_KEY'),
 
 conn = Cex(auth_param)
 
+archive_orders = []
+
+
+async def get_archive_orders(symbol1, symbol2):
+    global archive_orders
+    res = await conn.private_get(f"archived_orders/{symbol1}/{symbol2}")
+    archive_orders += res
+
 
 async def start():
     request = {'e': "get-balance", 'oid': '1'}
@@ -38,13 +46,8 @@ async def start():
 
     print(my_balance)
 
-    archive_orders = {}
     coroutines = []
     data = await conn.public_get("currency_limits")
-
-    async def get_archive_orders(symbol1, symbol2):
-        res = await conn.private_get(f"archived_orders/{symbol1}/{symbol2}")
-        print(res)
 
     if data.get('ok') == 'ok':
         for pair in data['data']['pairs']:
@@ -55,16 +58,16 @@ async def start():
 
         if coroutines:
             await asyncio.gather(*coroutines)
+            for order in archive_orders:
+                print(order)
 
     await conn.stop()
 
 
 conn.on_connect_ws = start
-# conn.method_routes += [("subscription", handle_subscription)]
-
 loop = asyncio.get_event_loop()
 
 try:
     loop.run_until_complete(conn.run_receiver())
 except KeyboardInterrupt:
-    print("Application closed by KeyboardInterrupt.")
+    logger.info("Application closed by KeyboardInterrupt.")
