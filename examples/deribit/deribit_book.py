@@ -5,22 +5,10 @@ import logging
 import sys
 
 from examples.common.book_watcher import BookWatcher
-from ssc2ce import Deribit
-
-if len(sys.argv) > 1 and "cpp" in sys.argv:
-    from importlib import util
-
-    ssc2ce_cpp_spec = util.find_spec("ssc2ce_cpp")
-    if ssc2ce_cpp_spec:
-        from ssc2ce_cpp import DeribitParser
-    else:
-        print("You must install the ssc2ce_cpp module to use its features.\n pip install ssc2ce_cpp")
-        exit(1)
-else:
-    from ssc2ce.deribit.parser import DeribitParser
+from ssc2ce import Deribit, create_parser
 
 conn = Deribit()
-parser = DeribitParser()
+parser = create_parser(exchange="deribit", is_cpp=len(sys.argv) > 1 and "cpp" in sys.argv)
 watcher = BookWatcher(parser)
 conn.on_message = parser.parse
 
