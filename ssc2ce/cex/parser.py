@@ -4,7 +4,7 @@ from typing import Callable, Dict
 
 from ssc2ce.common.abstract_parser import AbstractParser
 from ssc2ce.cex.l2_book import CexL2Book
-from ssc2ce.common.exceptions import BrokenOrderBook
+from ssc2ce.common.exceptions import BrokenOrderbook
 
 
 class CexParser(AbstractParser):
@@ -12,10 +12,10 @@ class CexParser(AbstractParser):
 
     """
 
-    _routes: Dict[str, Callable[[dict], None]]
-
     def __init__(self):
         AbstractParser.__init__(self)
+        self._routes: Dict[str, Callable[[dict], None]] = None
+        self._handler_broken_orderbook: Callable[[str, int, int], None] = None
         self._routes = {
             # 'auth', self.handle_auth,
             # 'balance', self.handle_balance,
@@ -94,7 +94,10 @@ class CexParser(AbstractParser):
         book = self.get_book(data["pair"])
         book.sequence += 1
         if book.sequence != data["id"]:
-            raise BrokenOrderBook(data["pair"], book.sequence - 1, data["id"])
+            if self._handler_broken_orderbook:
+                self._handler_broken_orderbook(data["pair"], book.sequence - 1, data["id"])
+            else:
+                raise BrokenOrderbook(data["pair"], book.sequence - 1, data["id"])
 
         book.time = data["time"]
         for price, size in data['bids']:
