@@ -31,7 +31,7 @@ class FileReader:
 
         logger.info(f"{i} in {time() - start} sec. {self.counter}")
 
-    def handle_message(self, message: str) -> None:
+    def handle_message(self, _: str) -> None:
         self.counter += 1
 
 
@@ -56,5 +56,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-

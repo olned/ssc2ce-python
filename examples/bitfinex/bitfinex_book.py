@@ -20,7 +20,7 @@ class BookMaintainer:
         self.top_bid = 0.
         self.top_ask = 0.
 
-    def handle_book(self, message, connector):
+    def handle_book(self, message, _):
         if type(message[1]) is str:
             if message[1] == "cs":
                 pass

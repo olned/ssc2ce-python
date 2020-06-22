@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 import asyncio
-import json
 import logging
 from ssc2ce import Coinbase
 
-conn = Coinbase(False)
+conn = Coinbase(sandbox=False)
 
 pending = {}
 
@@ -55,6 +54,7 @@ async def run():
     global instruments
     instruments += list(my_products.keys())
     await conn.run_receiver()
+
 
 conn.on_before_handling = dump
 conn.on_connect_ws = subscribe_books
