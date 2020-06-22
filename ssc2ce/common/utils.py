@@ -16,11 +16,9 @@ def resolve_route(value, routes):
         return handler
 
 
-
-
-
 class IntId:
-    id = 0
+    def __init__(self):
+        self.id = 0
 
     def get_id(self):
         self.id += 1
