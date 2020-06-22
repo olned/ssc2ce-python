@@ -22,27 +22,27 @@ class SessionWrapper:
      - on_before_handling -
     """
 
-    __internal_session: bool = True
-    __is_session: bool = False
-    __session: aiohttp.ClientSession = None
-    _timeout: aiohttp.ClientTimeout = None
-
-    _on_connect: Optional[Callable[[], Any]] = None
-    _async_on_connect: Optional[Callable[[], Awaitable[Any]]] = None
-
-    _on_message: Optional[Callable[[str], bool]] = None
-    _async_on_message: Optional[Callable[[str], Awaitable[bool]]] = None
-
-    on_close_ws: Callable[[], Any] = None
-    on_before_handling: Callable[[str], Any] = None
-
-    ws_api: str
-    rest_api: str
-    ws: aiohttp.ClientWebSocketResponse
-    last_message: str
-    receipt_time: float
-
     def __init__(self, timeout: aiohttp.ClientTimeout = None, session: aiohttp.ClientSession = None):
+        self.__internal_session: bool = True
+        self.__is_session: bool = False
+        self.__session: Optional[aiohttp.ClientSession] = None
+        self._timeout: Optional[aiohttp.ClientTimeout] = None
+
+        self._on_connect: Optional[Callable[[], Any]] = None
+        self._async_on_connect: Optional[Callable[[], Awaitable[Any]]] = None
+
+        self._on_message: Optional[Callable[[str], bool]] = None
+        self._async_on_message: Optional[Callable[[str], Awaitable[bool]]] = None
+
+        self.on_close_ws: Optional[Callable[[], Any]] = None
+        self.on_before_handling: Optional[Callable[[str], Any]] = None
+
+        self.ws_api: str = ""
+        self.rest_api: str = ""
+        self.ws: Optional[aiohttp.ClientWebSocketResponse] = None
+        self.last_message: str = ""
+        self.receipt_time: float = 0.
+
         if session:
             self._session = session
             self.__internal_session = False

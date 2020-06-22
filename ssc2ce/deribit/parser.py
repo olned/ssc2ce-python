@@ -1,9 +1,10 @@
 import json
 import logging
+from typing import Callable, Dict, Optional
 
 from ssc2ce.common.abstract_parser import AbstractParser
-from ssc2ce.deribit.l2_book import DeribitL2Book, L2Book
-from ssc2ce.common.exceptions import BrokenOrderBook
+from ssc2ce.deribit.l2_book import DeribitL2Book
+from ssc2ce.common.exceptions import BrokenOrderbook
 
 
 class DeribitParser(AbstractParser):
@@ -15,7 +16,8 @@ class DeribitParser(AbstractParser):
         AbstractParser.__init__(self)
         self.logger = logging.getLogger(__name__)
         self.deprecated_already_warn = False
-        self.books = {}
+        self._handler_broken_orderbook: Optional[Callable[[str, int, int], None]] = None
+        self._books: Dict[str, DeribitL2Book] = {}
 
     async def handle_message(self, message):
         if not self.deprecated_already_warn:
@@ -52,11 +54,11 @@ class DeribitParser(AbstractParser):
 
         return processed
 
-    def get_book(self, instrument: str) -> L2Book:
-        book: L2Book = self.books.get(instrument)
+    def get_book(self, instrument: str) -> DeribitL2Book:
+        book = self._books.get(instrument)
         if book is None:
-            book = L2Book(instrument)
-            self.books[instrument] = book
+            book = DeribitL2Book(instrument)
+            self._books[instrument] = book
 
         return book
 
@@ -78,8 +80,7 @@ class DeribitParser(AbstractParser):
         for i in message['asks']:
             book.asks.add(i[1], i[2])
 
-    @staticmethod
-    def handle_update(book: DeribitL2Book, message: dict) -> None:
+    def handle_update(self, book: DeribitL2Book, message: dict) -> None:
         """
 
         :param book:
@@ -88,7 +89,10 @@ class DeribitParser(AbstractParser):
         """
         prev_change_id = message["prev_change_id"]
         if prev_change_id != book.change_id:
-            raise BrokenOrderBook(book.instrument, prev_change_id, book.change_id)
+            if self._handler_broken_orderbook:
+                self._handler_broken_orderbook(book.instrument(), prev_change_id, book.change_id)
+            else:
+                raise BrokenOrderbook(book.instrument(), prev_change_id, book.change_id)
 
         book.change_id = message["change_id"]
         book.timestamp = message["timestamp"]

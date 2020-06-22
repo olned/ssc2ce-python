@@ -1,8 +1,5 @@
 import logging
 from ssc2ce.common import L2Book
-from collections import deque
-
-from ssc2ce.common.exceptions import BrokenOrderBook
 
 
 class BitfinexL2Book(L2Book):
