@@ -5,4 +5,5 @@ ssc2ce_cpp
 python-dotenv
 twine
 pylint
+pytest
 autopep8
