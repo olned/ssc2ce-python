@@ -1,13 +1,4 @@
-import asyncio
-import json
-import logging
-
-from time import time
-
-import aiohttp
-
-from ssc2ce.common.exceptions import Ssc2ceError
-from ssc2ce.common import AuthType
+from ssc2ce.coinbase_pro.auth import make_auth_params
 from ssc2ce.common.session import SessionWrapper
 from aiohttp import ClientResponseError
 
@@ -27,8 +18,8 @@ class Coinbase(SessionWrapper):
     """
 
     def __init__(self,
-                 sandbox: bool = True,
-                 auth_param: dict = None):
+                 auth_param: dict = None,
+                 sandbox: bool = True):
 
         super().__init__()
 
@@ -38,15 +29,7 @@ class Coinbase(SessionWrapper):
         self.rest_api = "https://api-public.sandbox.pro.coinbase.com" if sandbox \
             else "https://api.pro.coinbase.com"
         self.sandbox = sandbox
-
-    async def public_get(self, request_path, params=None):
-        async with self._session.get(url=self.rest_api + request_path,
-                                     params=params,
-                                     headers=None) as response:
-            if response.status == 200:
-                return await response.json()
-            else:
-                response.raise_for_status()
+        self.auth_param = auth_param
 
     async def get_currencies(self):
         try:
@@ -61,3 +44,29 @@ class Coinbase(SessionWrapper):
         except ClientResponseError as e:
             self.logger.error(e.message)
             return []
+
+    def _auth_headers(self, path, method, body=''):
+        auth_params = make_auth_params(key=self.auth_param["api_key"],
+                                       secret=self.auth_param["secret_key"],
+                                       passphrase=self.auth_param["passphrase"],
+                                       request_method=method,
+                                       request_path_url=path,
+                                       request_body=body)
+
+        return {
+            'Content-Type': 'application/json',
+            'CB-ACCESS-SIGN': auth_params['signature'].decode('ascii'),
+            'CB-ACCESS-TIMESTAMP': auth_params['timestamp'],
+            'CB-ACCESS-KEY': auth_params['key'],
+            'CB-ACCESS-PASSPHRASE': auth_params['passphrase'],
+        }
+
+    async def private_get(self, request_path):
+        headers = self._auth_headers(path=request_path, method='GET', body='')
+
+        async with self._session.get(self.rest_api + request_path, headers=headers) as response:
+            if response.status == 200:
+                return await response.json()
+            else:
+                self.logger.error(self.rest_api + request_path)
+                response.raise_for_status()

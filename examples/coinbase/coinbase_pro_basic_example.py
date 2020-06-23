@@ -31,8 +31,6 @@ async def subscribe():
 
 
 def handle_heartbeat(data: dict) -> bool:
-    global last_time
-    last_time = data["time"]
     logger.info(f"{repr(data)}")
     return True
 

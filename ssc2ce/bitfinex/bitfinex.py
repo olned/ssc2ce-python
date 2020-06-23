@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 from time import time
+from typing import Optional, Callable, Any, Awaitable
 
 import aiohttp
 
@@ -12,7 +13,8 @@ from enum import IntEnum
 
 
 class Bitfinex(SessionWrapper):
-    _on_received_info: None
+    _user_on_connect: Optional[Callable[[], Any]] = None
+    _user_async_on_connect: Optional[Callable[[], Awaitable[Any]]] = None
 
     class ConfigFlag(IntEnum):
         TIMESTAMP = 32768
@@ -37,7 +39,6 @@ class Bitfinex(SessionWrapper):
         self.ws_api = 'wss://api-pub.bitfinex.com/ws/2'
         self.flags = flags
         self.logger = logging.getLogger(__name__)
-        self._timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=20)
         self.routes = [
             ("subscribed", self.handle_subscribed),
             ("info", self.handle_info),
@@ -63,12 +64,23 @@ class Bitfinex(SessionWrapper):
 
     @property
     def on_connect_ws(self):
-        return None
+        if self._async_on_connect:
+            return self._user_async_on_connect
+        else:
+            return self._user_on_connect
 
     @on_connect_ws.setter
-    def on_connect_ws(self, value):
-        self._on_connect_ws_is_routine = asyncio.iscoroutinefunction(value)
-        self._on_received_info = value
+    def on_connect_ws(self, handler):
+        if handler is None:
+            self._user_async_on_connect = None
+            self._user_on_connect = None
+        else:
+            if asyncio.iscoroutinefunction(handler):
+                self._user_async_on_connect = handler
+                self._user_on_connect = None
+            else:
+                self._user_async_on_connect = None
+                self._user_on_connect = handler
 
     def handle_message(self, message: str):
         data = json.loads(message)
@@ -128,11 +140,10 @@ class Bitfinex(SessionWrapper):
         if message["platform"]["status"] == 1:
             if not self.is_connected:
                 asyncio.ensure_future(self.configure())
-                if self._on_received_info:
-                    if self._on_connect_ws_is_routine:
-                        asyncio.ensure_future(self._on_received_info())
-                    else:
-                        self._on_received_info()
+                if self._user_async_on_connect:
+                    asyncio.ensure_future(self._user_async_on_connect())
+                elif self._user_on_connect:
+                    self._user_on_connect()
             else:
                 if self.on_maintenance:
                     asyncio.ensure_future(self.on_maintenance(message))

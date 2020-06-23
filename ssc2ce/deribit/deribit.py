@@ -5,9 +5,30 @@ import logging
 import aiohttp
 
 from ssc2ce.common.exceptions import Ssc2ceError
-from ssc2ce.common import AuthType
 from ssc2ce.common.session import SessionWrapper
-from ssc2ce.common.utils import resolve_route, hide_secret, IntId
+from ssc2ce.common.utils import resolve_route, IntId
+
+from enum import IntEnum
+
+
+class AuthType(IntEnum):
+    NONE = 0
+    PASSWORD = 1
+    CREDENTIALS = 2
+    SIGNATURE = 3
+
+
+def hide_secret(request):
+    data = request.copy()
+    hidden_keys = ["password", "username", "client_id", "client_secret", "refresh_token", "access_token"]
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            data[key] = hide_secret(value)
+        elif key in hidden_keys:
+            data[key] = "***"
+
+    return data
 
 
 class Deribit(SessionWrapper):
@@ -48,13 +69,10 @@ class Deribit(SessionWrapper):
 
         self.on_authenticated = None
         self.on_token = None
-        self.on_before_handling = None
         self.on_response_error = None
         self.on_handle_response = None
 
-        self.receipt_time = None
         self.requests = {}
-        self.last_message = None
         self.ws_api = f"wss://{'test' if testnet else 'www'}.deribit.com/ws/api/v2/"
         self.get_id = get_id
         self.logger = logging.getLogger(__name__)
@@ -62,8 +80,6 @@ class Deribit(SessionWrapper):
         self.client_id = client_id
         self.client_secret = client_secret
         self.scope = scope
-
-        self._timeout: aiohttp.ClientTimeout = aiohttp.ClientTimeout(total=20)
 
         self.method_routes = [
             ("heartbeat", self.handle_heartbeat),

@@ -2,21 +2,20 @@ import asyncio
 import json
 import logging
 from abc import ABC, abstractmethod
-from typing import Callable
+from typing import Callable, Optional
 
 from ssc2ce.deribit.l2_book import DeribitL2Book, L2Book
-from ssc2ce.common.exceptions import BrokenOrderBook
+from ssc2ce.common.exceptions import BrokenOrderbook
 
 
 class AbstractParser(ABC):
     """
 
     """
-    _on_book_update: Callable[[L2Book], bool] = None
-    _on_book_setup: Callable[[L2Book], bool] = None
 
     def __init__(self):
-        pass
+        self._on_book_update: Optional[Callable[[L2Book], None]] = None
+        self._on_book_setup: Optional[Callable[[L2Book], None]] = None
 
     def set_on_book_setup(self, handler) -> None:
         self._on_book_setup = handler

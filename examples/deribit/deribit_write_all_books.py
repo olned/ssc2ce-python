@@ -67,7 +67,7 @@ async def subscribe_books():
     })
 
 
-output = open("deribit_dump.txt", "w")
+output = open("deribit_dump.jsonl", "w")
 
 
 def dump(msg: str):
@@ -80,7 +80,6 @@ def stop():
 
 
 conn.on_before_handling = dump
-
 conn.on_connect_ws = get_currencies
 
 loop = asyncio.get_event_loop()
