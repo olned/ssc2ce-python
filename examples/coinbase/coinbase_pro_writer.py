@@ -24,7 +24,7 @@ async def subscribe_books():
     })
 
 
-output = open("coinbase_dump.txt", "w")
+output = open("coinbase_dump.jsonl", "w")
 
 
 def dump(msg: str):

@@ -36,7 +36,7 @@ async def subscribe():
         await conn.ws.send_json(request)
 
 
-output = open("cex_dump_1h.txt", "w")
+output = open("cex_dump_1h.jsonl", "w")
 
 
 def dump(msg: str):

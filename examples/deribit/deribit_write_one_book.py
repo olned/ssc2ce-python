@@ -12,7 +12,7 @@ parser = create_parser(exchange="deribit", is_cpp=len(sys.argv) > 1 and "cpp" in
 watcher = BookWatcher(parser)
 conn.on_message = parser.parse
 
-logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
 logger = logging.getLogger("deribit-book")
 
 
@@ -25,7 +25,7 @@ async def subscribe_book():
     })
 
 
-output = open("../../ssc2ce/tests/deribit_dump_test.txt", "w")
+output = open("deribit_dump_btc_perpetual.jsonl", "w")
 
 
 def dump(msg: str):
