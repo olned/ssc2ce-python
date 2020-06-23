@@ -1,8 +1,14 @@
 # ssc2ce
-A Set of Simple Connectors for access To Cryptocurrency Exchanges via websocket based on
- [aiohttp](https://aiohttp.readthedocs.io) .
+A set of simple connectors for access to few cryptocurrency Exchanges via websocket based on
+ [aiohttp](https://aiohttp.readthedocs.io).
 
-This is more of a pilot project, if you have any wishes for adding exchanges or expanding functionality, please register issues
+Supported Exchanges:
+- Bitfinex - only public API,
+- CEX.io,
+- Coinbase Pro
+- Deribit
+    
+This is more of a pilot project, if you have any wishes for adding exchanges or expanding functionality, please register issues.
 
 ## Installation
 Install ssc2ce with:
@@ -23,7 +29,7 @@ from ssc2ce import Bitfinex
 conn = Bitfinex()
 
 
-async def handle_subscription(data, connector: Bitfinex):
+def handle_subscription(data, connector: Bitfinex):
     print(data, f"received:{connector.receipt_time}")
 
 
