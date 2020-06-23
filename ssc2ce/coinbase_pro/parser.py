@@ -15,6 +15,7 @@ class CoinbaseParser(AbstractParser):
     _on_heartbeat: Callable[[dict], bool] = None
 
     def __init__(self):
+        AbstractParser.__init__(self)
         self.logger = logging.getLogger(__name__)
         self.deprecated_already_warn = False
         self.books = {}
