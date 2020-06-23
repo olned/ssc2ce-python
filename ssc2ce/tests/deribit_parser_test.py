@@ -3,7 +3,7 @@ import os
 from unittest import TestCase
 
 from ssc2ce import DeribitParser, BrokenOrderbook
-from .deribit_dump_result import results
+from .deribit_expected_result import results
 
 path = os.path.dirname(os.path.abspath(__file__))
 path = os.path.join(path, "deribit_dump.jsonl")

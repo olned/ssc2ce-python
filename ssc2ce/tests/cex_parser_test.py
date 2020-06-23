@@ -3,10 +3,10 @@ import os
 from unittest import TestCase
 
 from ssc2ce import CexParser, BrokenOrderbook
-from .cex_dump_result import results
+from .cex_expected_result import results
 
 path = os.path.dirname(os.path.abspath(__file__))
-path = os.path.join(path, "cex_dump.txt")
+path = os.path.join(path, "cex_dump.jsonl")
 with open(path) as f:
     lines = f.readlines()
 

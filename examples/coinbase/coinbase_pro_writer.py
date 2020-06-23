@@ -37,9 +37,7 @@ def stop():
 
 
 async def run():
-    # from pprint import pprint
     all_products = [x for x in await conn.get_products()]
-    # pprint(all_products)
 
     my_products = {x['id']: x for x in all_products if x['quote_currency'] == 'EUR'}
     base_currencies = [x['base_currency'] for x in my_products.values()]
