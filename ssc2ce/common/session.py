@@ -169,10 +169,12 @@ class SessionWrapper:
                                      params=params,
                                      headers=None) as response:
             if response.status == 200:
-                if response.content_type == 'text/json':
-                    data = await response.read()
+                data = await response.read()
+                if response.content_type.endswith('json'):
                     data = json.loads(data)
-                    return data
+                else:
+                    logger.warning(f"Unexpected response.content_type:{response.content_type}")
+                return data
             else:
                 response.raise_for_status()
 
