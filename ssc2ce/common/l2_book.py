@@ -1,7 +1,8 @@
+from .book_event_handler_holder import BookEventHandlerHolder
 from .l2_book_side import L2BookSide
 
 
-class L2Book:
+class L2Book(BookEventHandlerHolder):
     """
 
     """
@@ -11,6 +12,8 @@ class L2Book:
 
         :param instrument:
         """
+
+        BookEventHandlerHolder.__init__(self)
         self._instrument = instrument
         self._bids = L2BookSide(is_bids=True)
         self._asks = L2BookSide(is_bids=False)
