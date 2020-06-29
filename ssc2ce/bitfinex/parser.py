@@ -144,10 +144,17 @@ class BitfinexParser(AbstractParser):
             channel = handler(message)
 
             idx = None
+            y = [(i[0], i[1] if isinstance(i[1], str) else str(i[1])) for i in message.items()]
+
             for i, s in enumerate(self.subscriptions):
-                x = list(s[0].items())
-                y = list(message.items())
-                if x[1:] <= y:
+                ok = True
+                z = [(i[0], i[1]if isinstance(i[1], str) else str(i[1])) for i in s[0].items()]
+                for x in z:
+                    if x not in y:
+                        ok = False
+                        break
+
+                if ok:
                     idx = i
                     if s[1]:
                         channel.set_on_received(s[1])
