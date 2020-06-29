@@ -176,7 +176,6 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         """
 
         await self.subscribe({
-            "event": "subscribe",
             "channel": "ticker",
             "symbol": symbol
         }, handler)
@@ -192,7 +191,6 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         """
 
         await self.subscribe({
-            "event": "subscribe",
             "channel": "trades",
             "symbol": symbol
         }, handler)
@@ -214,7 +212,6 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         """
 
         await self.subscribe({
-            "event": "subscribe",
             "channel": "book",
             "symbol": symbol,
             "prec": f"P{precision}",
@@ -235,7 +232,6 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         """
 
         await self.subscribe({
-            "event": "subscribe",
             "channel": "book",
             "pair": pair,
             "prec": "R0",
@@ -253,7 +249,6 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         """
 
         await self.subscribe({
-            "event": "subscribe",
             "channel": "candles",
             "key": f"trade:{time_frame}:{symbol}"
         }, handler)
