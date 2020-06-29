@@ -22,12 +22,14 @@ def create_parser(exchange: str, is_cpp: bool):
             logger.error(f"Unknown exchange {exchange}")
             return None
     else:
-        if exchange == 'deribit':
-            from ssc2ce.deribit.parser import DeribitParser as Parser
-        elif exchange == 'coinbase':
-            from ssc2ce.coinbase_pro.parser import CoinbaseParser as Parser
+        if exchange == 'bitfinex':
+            from ssc2ce.bitfinex.parser import BitfinexParser as Parser
         elif exchange == 'cex':
             from ssc2ce.cex.parser import CexParser as Parser
+        elif exchange == 'coinbase':
+            from ssc2ce.coinbase_pro.parser import CoinbaseParser as Parser
+        elif exchange == 'deribit':
+            from ssc2ce.deribit.parser import DeribitParser as Parser
         else:
             logger.error(f"Unknown exchange {exchange}")
             return None

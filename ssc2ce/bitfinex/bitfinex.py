@@ -1,66 +1,47 @@
 import asyncio
-import json
 import logging
-from time import time
 from typing import Optional, Callable, Any, Awaitable
 
-import aiohttp
-
+from ssc2ce.bitfinex.enums import ConfigFlag
+from ssc2ce.bitfinex.icontroller import IBitfinexController
+from ssc2ce.bitfinex.parser import BitfinexParser
 from ssc2ce.common.session import SessionWrapper
-from ssc2ce.common.utils import resolve_route
-
-from enum import IntEnum
 
 
-class Bitfinex(SessionWrapper):
+class Bitfinex(SessionWrapper, IBitfinexController):
     _user_on_connect: Optional[Callable[[], Any]] = None
     _user_async_on_connect: Optional[Callable[[], Awaitable[Any]]] = None
 
-    class ConfigFlag(IntEnum):
-        TIMESTAMP = 32768
-        SEQ_ALL = 65536
-        CHECKSUM = 131072
-
-    class StatusFlag(IntEnum):
-        MAINTENANCE = 0
-        OPERATIVE = 1
-
-    on_maintenance = None
     on_conf = None
     receipt_time = None
     is_connected = False
-    subscriptions = []
-    channel_handlers = {}
 
     def __init__(self,
                  flags: ConfigFlag = ConfigFlag.TIMESTAMP | ConfigFlag.SEQ_ALL):
-        super().__init__()
+        """
 
+        :param flags: a bitwise XOR of the different options:
+            8 - enable all decimals as strings
+            TIME_S - 32 - Enable all timestamps as strings
+            TIMESTAMP - 32768 - Adds a Timestamp in milliseconds to each received event.
+            SEQ_ALL - 65536 - Adds sequence numbers to each event.
+            OB_CHECKSUM - 131072 - Enable checksum for every book iteration.
+        """
+
+        super().__init__()
+        self.server_version = None
+        self.on_check_version: Callable[[int], bool] = self.check_version
+        self.on_maintenance = None
         self.ws_api = 'wss://api-pub.bitfinex.com/ws/2'
         self.flags = flags
         self.logger = logging.getLogger(__name__)
-        self.routes = [
-            ("subscribed", self.handle_subscribed),
-            ("info", self.handle_info),
-            ("conf", self.handle_conf),
-            # ("", self.warn_handler),
-        ]
-
-    async def configure(self, flags: ConfigFlag = None):
-        if flags is not None:
-            self.flags = flags
-
-        if self.flags is not None:
-            request = dict(event="conf", flags=self.flags)
-            await self.ws.send_json(request)
-
-    async def subscribe(self, request, handler):
-        self.subscriptions.append((request, handler))
-        self.logger.info(f"subscribe {request}")
-        await self.ws.send_json({
-            "event": "subscribe",
-            **request
-        })
+        self.parser = BitfinexParser()
+        self.parser.set_controller(self)
+        self.pong_cid = None
+        self.pong_ts = None
+        self.last_err_code = None
+        self.on_message = self.parser.parse
+        self.on_handle_version_info = self.handle_version_and_status
 
     @property
     def on_connect_ws(self):
@@ -83,61 +64,28 @@ class Bitfinex(SessionWrapper):
                 self._user_on_connect = handler
 
     def handle_message(self, message: str):
-        data = json.loads(message)
+        self.logger.warning(f"Unhandled message {message}")
 
-        if isinstance(data, list):
-            channel_id = data[0]
-            handler = self.channel_handlers.get(channel_id)
-            if handler:
-                handler(data, self)
-            else:
-                self.logger.warning(f"Can't find handler for channel_id{channel_id}, {message}")
-        elif isinstance(data, dict):
-            if "event" in data:
-                if asyncio.iscoroutinefunction(self.handle_event):
-                    asyncio.ensure_future(self.handle_event(data))
-                else:
-                    self.handle_event(data)
-            else:
-                self.logger.warning(f"Unknown message {message}")
-        else:
-            self.logger.warning(f"Unknown message {message}")
-
-    async def empty_handler(self, data):
-        pass
-
-    def handle_subscribed(self, message):
-        self.logger.info(f"receive subscribed: {message}")
-        idx = None
-        for i, s in enumerate(self.subscriptions):
-            if s[0].items() <= message.items():
-                idx = i
-                self.channel_handlers[message["chanId"]] = s[1]
-
-        if idx:
-            del self.subscriptions[idx]
-
-    def handle_conf(self, message):
-        """{'event': 'conf', 'status': 'OK', 'flags': 98304}"""
-        self.logger.info(f"{message}")
-        if self.on_conf:
-            self.on_conf()
-
-    def handle_info(self, message):
+    def check_version(self, version: int) -> bool:
         """
-        Handle an info message that contains the actual version of the websocket stream, along with a platform status
-        flag (1 for operative, 0 for maintenance
-        :param message: Info messages {'event': 'info', 'version': 2, 'serverId': ..., 'platform': {'status': 1}}
-          version: the actual version of the websocket stream must be 2
-          status: a platform status flag (1 for operative, 0 for maintenance).
+
+        :param version:
         :return:
         """
-        self.logger.info(f"{message}")
+        self.server_version = version
+        if version != 2:
+            self.logger.error(f"Bitfinex connector support only version 2 but receive {version}")
+            return False
+        else:
+            return True
 
-        if message["version"] != 2:
-            raise NotImplemented(f"Bitfinex connector support only version 2 but receive {message}")
+    def check_status(self, status: int):
+        """
 
-        if message["platform"]["status"] == 1:
+        :param status:
+        :return:
+        """
+        if status == 1:
             if not self.is_connected:
                 asyncio.ensure_future(self.configure())
                 if self._user_async_on_connect:
@@ -146,27 +94,166 @@ class Bitfinex(SessionWrapper):
                     self._user_on_connect()
             else:
                 if self.on_maintenance:
-                    asyncio.ensure_future(self.on_maintenance(message))
+                    asyncio.ensure_future(self.on_maintenance(status))
         else:
             if self.on_maintenance:
-                asyncio.ensure_future(self.on_maintenance(message))
+                asyncio.ensure_future(self.on_maintenance(status))
 
-    def warn_handler(self, message):
-        self.logger.warning(f"Unsupported message {message}")
+    def handle_version_and_status(self, version_no: int, status: int):
+        if not self.check_version(version_no):
+            asyncio.ensure_future(self.stop)
+            return
 
-    def handle_event(self, message):
-        event = message["event"]
-        handler = resolve_route(event, self.routes)
+        self.check_status(status=status)
 
-        if handler:
-            handler(message)
+    def handle_error(self, error_code: int):
+        self.last_err_code = error_code
+        self.logger.error(self.parser.last_message)
+
+    def handle_pong(self, ts: int, cid: int):
+        self.pong_ts = ts
+        self.pong_cid = cid
+
+    def handle_info(self, info_code: int):
+        self.logger.warning("NOT IMPLEMENTED JET")
+        if info_code == 20051:
+            pass
+        elif info_code == 20060:
+            pass
+        elif info_code == 20061:
+            pass
         else:
-            self.logger.warning(f"Unhandled event:{event}, message:{repr(message)} .")
-        return
+            pass
 
-    def close(self):
-        super()._close()
+    async def configure(self, flags: ConfigFlag = None):
+        """
 
-    async def stop(self):
-        await self.ws.close()
-        self.close()
+        :param flags:
+        :return:
+        """
+        if flags is not None:
+            self.flags = flags
+
+        if self.flags is not None:
+            request = dict(event="conf", flags=self.flags)
+            await self.ws.send_json(request)
+
+    async def request_ping(self):
+        """
+        Send ping request
+
+        :return:
+        """
+
+        await self.ws.send_json({
+            "event": "ping"
+        })
+
+    async def subscribe(self,
+                        request,
+                        handler: Optional[Callable[[list], None]] = None):
+        """
+
+        :param request:
+        :param handler:
+        :return:
+        """
+        self.parser.subscriptions.append((request, handler))
+        self.logger.info(f"subscribe {request}")
+        await self.ws.send_json({
+            "event": "subscribe",
+            **request
+        })
+
+    async def subscribe_ticker(self, symbol: str,
+                               handler: Optional[Callable[[list], None]] = None):
+        """
+        Subscribe to ticker
+
+        :param symbol: 	Trading pair or funding currency
+        :param handler:
+        :return:
+        """
+
+        await self.subscribe({
+            "event": "subscribe",
+            "channel": "ticker",
+            "symbol": symbol
+        }, handler)
+
+    async def subscribe_trades(self, symbol: str,
+                               handler: Optional[Callable[[list], None]] = None):
+        """
+        Subscribe to trades channel
+
+        :param symbol: Trading pair or funding currency
+        :param handler:
+        :return:
+        """
+
+        await self.subscribe({
+            "event": "subscribe",
+            "channel": "trades",
+            "symbol": symbol
+        }, handler)
+
+    async def subscribe_book(self,
+                             symbol: str,
+                             precision: int = 0,
+                             frequency: int = 0,
+                             length: int = 25,
+                             handler: Optional[Callable[[list], None]] = None):
+        """
+
+        :param symbol: Trading pair or funding currency
+        :param precision: Level of price aggregation: 0, 1, 2, 3, 4
+        :param frequency: Frequency of updates: 0 - realtime, 1 - 2sec
+        :param length: Number of price points: 25, 100
+        :param handler:
+        :return:
+        """
+
+        await self.subscribe({
+            "event": "subscribe",
+            "channel": "book",
+            "symbol": symbol,
+            "prec": f"P{precision}",
+            "freq": f"F{frequency}",
+            "len": length
+        }, handler)
+
+    async def subscribe_raw_book(self,
+                                 pair: str,
+                                 length: int = 25,
+                                 handler: Optional[Callable[[list], None]] = None):
+        """
+
+        :param pair: Trading pair or funding currency
+        :param length: Number of price points: 1, 25, 100
+        :param handler:
+        :return:
+        """
+
+        await self.subscribe({
+            "event": "subscribe",
+            "channel": "book",
+            "pair": pair,
+            "prec": "R0",
+            "len": length
+        }, handler)
+
+    async def subscribe_candles(self, symbol: str, time_frame: str = "1m",
+                                handler: Optional[Callable[[list], None]] = None):
+        """
+
+        :param symbol: Trading pair or funding currency
+        :param time_frame: 1m, 5m, 15m, 30m, 1h, 3h, 6h, 12h, 1D, 7D, 14D, 1M
+        :param handler:
+        :return:
+        """
+
+        await self.subscribe({
+            "event": "subscribe",
+            "channel": "candles",
+            "key": f"trade:{time_frame}:{symbol}"
+        }, handler)

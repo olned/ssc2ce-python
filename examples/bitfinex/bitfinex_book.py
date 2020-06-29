@@ -2,7 +2,8 @@
 import asyncio
 import logging
 
-from ssc2ce.bitfinex import Bitfinex, BitfinexL2Book
+from ssc2ce.bitfinex import Bitfinex
+from examples.common.book_watcher import BookWatcher
 
 logging.basicConfig(
     format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s',
@@ -10,46 +11,31 @@ logging.basicConfig(
 logger = logging.getLogger("bitfinex-basic-example")
 
 conn = Bitfinex()
-
-
-class BookMaintainer:
-    def __init__(self, instrument):
-        self.book = BitfinexL2Book(instrument)
-        self.check_sum = None
-        self.active = False
-        self.top_bid = 0.
-        self.top_ask = 0.
-
-    def handle_book(self, message, _):
-        if type(message[1]) is str:
-            if message[1] == "cs":
-                pass
-        elif len(message[1]) == 3:
-            self.book.handle_update(message)
-            self.book.time = message[-1]
-        else:
-            self.book.handle_snapshot(message)
-            self.book.time = message[-1]
-
-        if self.top_ask != self.book.top_ask_price() or self.top_bid != self.book.top_bid_price():
-            self.top_ask = self.book.top_ask_price()
-            self.top_bid = self.book.top_bid_price()
-            logger.info(
-                f"{self.book.instrument()} bid:{self.top_bid} ask:{self.top_ask}")
-
-
-btc = BookMaintainer("BTC-USD")
-eth = BookMaintainer("ETH-USD")
+watcher = BookWatcher(conn.parser)
 
 
 async def subscribe():
-    await conn.subscribe({'channel': "book", 'symbol': "tBTCUSD"}, handler=btc.handle_book)
-    await conn.subscribe({'channel': "book", 'symbol': "tETHUSD"}, handler=eth.handle_book)
+    await conn.subscribe_book("tBTCUSD")
+    await conn.subscribe_book("tETHUSD")
+
+
+output = open("bitfinex_dump.cvs", "w")
+
+
+def dump(msg: str):
+    output.write(msg)
+    output.write('\n')
+
+
+def stop():
+    asyncio.ensure_future(conn.ws.close())
 
 
 conn.on_connect_ws = subscribe
-
+conn.on_before_handling = dump
 loop = asyncio.get_event_loop()
+
+loop.call_later(3600, stop)
 
 try:
     loop.run_until_complete(conn.run_receiver())
