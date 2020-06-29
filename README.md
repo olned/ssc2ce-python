@@ -3,8 +3,8 @@ A set of simple connectors for access to few cryptocurrency Exchanges via websoc
  [aiohttp](https://aiohttp.readthedocs.io).
 
 Supported Exchanges:
-- Bitfinex - only public API,
-- CEX.io,
+- Bitfinex - only public API
+- CEX.io
 - Coinbase Pro
 - Deribit
     
