@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import asyncio
 import logging
+from datetime import datetime
 
 from ssc2ce.bitfinex import Bitfinex
 from examples.common.book_watcher import BookWatcher
@@ -18,8 +19,8 @@ async def subscribe():
     await conn.subscribe_book("tBTCUSD")
     await conn.subscribe_book("tETHUSD")
 
-
-output = open("bitfinex_dump.cvs", "w")
+start_at = "{0:%Y_%m_%d_%H_%M_%S}".format(datetime.utcnow())
+output = open(f"../bitfinex_dump_book-{conn.flags}-{start_at}.jsonl", "w")
 
 
 def dump(msg: str):
