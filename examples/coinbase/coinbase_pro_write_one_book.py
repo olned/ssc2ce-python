@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import asyncio
 import logging
+from datetime import datetime
+
 from ssc2ce import Coinbase
 
 conn = Coinbase(sandbox=False)
@@ -10,19 +12,19 @@ pending = {}
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
 logger = logging.getLogger("deribit-writer")
 
-
+product_id = "BTC-EUR"
 async def subscribe_books():
     await conn.ws.send_json({
         "type": "subscribe",
-        "product_ids": ["BTC-EUR"],
+        "product_ids": [product_id],
         "channels": [
             "level2",
             "heartbeat"
         ]
     })
 
-
-output = open("coinbase_dump.jsonl", "w")
+start_at = "{0:%Y_%m_%d_%H_%M_%S}".format(datetime.utcnow())
+output = open(f"../coinbase_dump-{product_id}-{start_at}.jsonl", "w")
 
 
 def dump(msg: str):

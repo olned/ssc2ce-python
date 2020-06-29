@@ -2,6 +2,8 @@
 import asyncio
 import json
 import logging
+from datetime import datetime
+
 from ssc2ce import Deribit
 
 conn = Deribit()
@@ -66,8 +68,8 @@ async def subscribe_books():
         }
     })
 
-
-output = open("deribit_dump.jsonl", "w")
+start_at = "{0:%Y_%m_%d_%H_%M_%S}".format(datetime.utcnow())
+output = open(f"../deribit_dump-{start_at}.jsonl", "w")
 
 
 def dump(msg: str):

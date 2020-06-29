@@ -2,6 +2,7 @@
 import asyncio
 import logging
 import os
+from datetime import datetime
 
 from examples.common.book_watcher import BookWatcher
 from ssc2ce import Cex, CexParser
@@ -35,8 +36,8 @@ async def subscribe():
 
         await conn.ws.send_json(request)
 
-
-output = open("cex_dump_1h.jsonl", "w")
+start_at = "{0:%Y_%m_%d_%H_%M_%S}".format(datetime.utcnow())
+output = open(f"../cex_dump-{start_at}.jsonl", "w")
 
 
 def dump(msg: str):

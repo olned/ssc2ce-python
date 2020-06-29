@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import asyncio
 import logging
+from datetime import datetime
+
 from ssc2ce import Coinbase
 
 conn = Coinbase(sandbox=False)
@@ -23,8 +25,8 @@ async def subscribe_books():
         ]
     })
 
-
-output = open("coinbase_dump.jsonl", "w")
+start_at = "{0:%Y_%m_%d_%H_%M_%S}".format(datetime.utcnow())
+output = open(f"../coinbase_dump-{start_at}.jsonl", "w")
 
 
 def dump(msg: str):
