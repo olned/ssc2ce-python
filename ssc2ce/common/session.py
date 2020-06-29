@@ -124,6 +124,7 @@ class SessionWrapper:
         Establish a connection and start the receiver loop.
         :return:
         """
+
         self.ws = await self._session.ws_connect(self.ws_api)
         if self._async_on_connect:
             await self._async_on_connect()
@@ -162,9 +163,22 @@ class SessionWrapper:
                 self.logger.warning(f"Unknown type of message {repr(message)}")
 
     def handle_message(self, message: str):
+        """
+        Handle message  - should be redefined in implementations
+
+        :param message:
+        :return:
+        """
         pass
 
     async def public_get(self, request_path, params=None):
+        """
+        Send HTTP GET request
+
+        :param request_path:
+        :param params:
+        :return:
+        """
         async with self._session.get(url=self.rest_api + request_path,
                                      params=params,
                                      headers=None) as response:
@@ -179,5 +193,10 @@ class SessionWrapper:
                 response.raise_for_status()
 
     async def stop(self):
+        """
+        Close connection and break the receiver loop
+        :return:
+        """
+
         await self.ws.close()
-        await self._session.close()
+        self._close()
