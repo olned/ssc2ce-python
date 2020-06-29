@@ -86,18 +86,8 @@ class Deribit(SessionWrapper):
         ]
         self.response_routes = [
             ("public/auth", self.handle_auth),
-            ("", self.empty_handler),
+            ("", self.empty_handler),  # TODO Do we need it?
         ]
-
-    def close(self):
-        super()._close()
-
-    async def stop(self):
-        """
-        Close connection and break the receiver loop
-        :return:
-        """
-        await self.ws.close()
 
     async def send_public(self, request: dict, callback=None, logging_it: bool = True) -> int:
         """
