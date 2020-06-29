@@ -65,8 +65,8 @@ class CoinbaseParser(AbstractParser):
         for i in message['asks']:
             book.asks.add(float(i[0]), float(i[1]))
 
-        if self._on_book_setup:
-            self._on_book_setup(book)
+        if self.on_book_setup:
+            self.on_book_setup(book)
 
         return True
 
@@ -84,8 +84,8 @@ class CoinbaseParser(AbstractParser):
             else:
                 book.bids.update(price=float(change[1]), size=float(change[2]))
 
-        if self._on_book_update:
-            self._on_book_update(book)
+        if self.on_book_update:
+            self.on_book_update(book)
         return True
 
     def handle_subscriptions(self, data: dict) -> bool:

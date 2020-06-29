@@ -80,8 +80,8 @@ class CexParser(AbstractParser):
         for price, size in data['asks']:
             book.asks.add(price, size)
 
-        if self._on_book_setup:
-            self._on_book_setup(book)
+        if self.on_book_setup:
+            self.on_book_setup(book)
 
     def handle_md_update(self, message: dict) -> None:
         """
@@ -106,5 +106,5 @@ class CexParser(AbstractParser):
         for price, size in data['asks']:
             book.bids.update(price, size)
 
-        if self._on_book_update and book.valid():
-            self._on_book_update(book)
+        if self.on_book_update and book.valid():
+            self.on_book_update(book)

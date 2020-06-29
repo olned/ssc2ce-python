@@ -43,12 +43,12 @@ class DeribitParser(AbstractParser):
 
                 if "prev_change_id" in params_data:
                     self.handle_update(book, params_data)
-                    if self._on_book_update:
-                        self._on_book_update(book)
+                    if self.on_book_update:
+                        self.on_book_update(book)
                 else:
                     self.handle_snapshot(book, params_data)
-                    if self._on_book_setup:
-                        self._on_book_setup(book)
+                    if self.on_book_setup:
+                        self.on_book_setup(book)
 
                 processed = True
 
