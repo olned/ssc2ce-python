@@ -29,15 +29,12 @@ from ssc2ce import Bitfinex
 conn = Bitfinex()
 
 
-def handle_subscription(data, connector: Bitfinex):
-    print(data, f"received:{connector.receipt_time}")
+def handle_subscription(data):
+    print(data, f"received:{conn.receipt_time}")
 
 
 async def subscribe():
-    await conn.subscribe({
-        "channel": "ticker",
-        "symbol": "tBTCUSD"
-    }, handler=handle_subscription)
+    await conn.subscribe_book("tBTCUSD", handler=handle_subscription)
 
 
 conn.on_connect_ws = subscribe
