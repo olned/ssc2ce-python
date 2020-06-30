@@ -36,7 +36,6 @@ class L2BookSide:
 
         if size <= VERY_SMALL_NUMBER:
             if value[0] == price:
-                old_size = self.data[i][1]
                 self.data.discard(value)
                 return True
             else:
