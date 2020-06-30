@@ -148,7 +148,7 @@ class BitfinexParser(AbstractParser):
 
             for i, s in enumerate(self.subscriptions):
                 ok = True
-                z = [(i[0], i[1]if isinstance(i[1], str) else str(i[1])) for i in s[0].items()]
+                z = [(i[0], i[1] if isinstance(i[1], str) else str(i[1])) for i in s[0].items()]
                 for x in z:
                     if x not in y:
                         ok = False
@@ -173,7 +173,7 @@ class BitfinexParser(AbstractParser):
         book = self.get_book(symbol)
         precision = message['prec']
         if precision == 'R0':
-            channel = RawBookChannel(channel_id, symbol, message)
+            channel = Channel(channel_id, message)
         elif symbol[0] == 't':
             channel = BookChannel(channel_id, symbol, message, book)
         else:
@@ -186,13 +186,9 @@ class BitfinexParser(AbstractParser):
         channel_id = message['chanId']
         symbol = message['symbol']
         if symbol[0] == 't':
-            channel = TradesChannel(channel_id,
-                                    symbol,
-                                    message['pair'])
+            channel = Channel(channel_id, message)
         else:
-            channel = FundingTradesChannel(channel_id,
-                                           symbol,
-                                           message['currency'])
+            channel = Channel(channel_id, message)
 
         self.channels[channel_id] = channel
         return channel
@@ -201,23 +197,19 @@ class BitfinexParser(AbstractParser):
         channel_id = message['chanId']
         symbol = message['symbol']
         if symbol[0] == 't':
-            channel = TickerChannel(channel_id,
-                                    symbol,
-                                    message['pair'])
+            channel = Channel(channel_id, message)
         else:
-            channel = FundingTickerChannel(channel_id,
-                                           symbol,
-                                           message['currency'])
+            channel = Channel(channel_id, message)
         self.channels[channel_id] = channel
         return channel
 
     def handle_candles_subscribed(self, message: dict) -> Channel:
         channel_id = message['chanId']
-        channel = CandlesChannel(channel_id,
-                                 message['key'])
+        channel = Channel(channel_id, message)
 
         self.channels[channel_id] = channel
         return channel
 
     def handle_unsubscribed(self, message: dict) -> bool:
+        self.last_message = message
         return False

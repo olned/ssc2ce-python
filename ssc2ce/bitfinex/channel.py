@@ -4,18 +4,19 @@ from ssc2ce.bitfinex.enums import ConfigFlag
 from ssc2ce.common import L2Book
 
 __all__ = ['Channel',
-           'TickerChannel',
-           'FundingTickerChannel',
-           'TradesChannel',
-           'FundingTradesChannel',
-           'CandlesChannel',
+           # 'TickerChannel',
+           # 'FundingTickerChannel',
+           # 'TradesChannel',
+           # 'FundingTradesChannel',
+           # 'CandlesChannel',
            'BookChannel',
            'FundingBookChannel',
-           'RawBookChannel']
+           # 'RawBookChannel'
+           ]
 
 
 class Channel:
-    def __init__(self, channel_id: int):
+    def __init__(self, channel_id: int, params: dict):
         self.channel_id = channel_id
         self.on_received: Optional[Callable[[list], bool]] = None
 
@@ -36,44 +37,44 @@ class Channel:
         self.time_stamp_position = 3 if self.sequence_present else 2
 
 
-class TickerChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, pair: str):
-        Channel.__init__(self, channel_id)
-        self.symbol = symbol
-        self.pair = pair
+# class TickerChannel(Channel):
+#     def __init__(self, channel_id: int, symbol: str, pair: str):
+#         Channel.__init__(self, channel_id)
+#         self.symbol = symbol
+#         self.pair = pair
+#
+#
+# class FundingTickerChannel(Channel):
+#     def __init__(self, channel_id: int, symbol: str, currency: str):
+#         Channel.__init__(self, channel_id)
+#         self.symbol = symbol
+#         self.currency = currency
+#
+#
+# class TradesChannel(Channel):
+#     def __init__(self, channel_id: int, symbol: str, currency: str):
+#         Channel.__init__(self, channel_id)
+#         self.symbol = symbol
+#         self.currency = currency
 
 
-class FundingTickerChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, currency: str):
-        Channel.__init__(self, channel_id)
-        self.symbol = symbol
-        self.currency = currency
-
-
-class TradesChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, currency: str):
-        Channel.__init__(self, channel_id)
-        self.symbol = symbol
-        self.currency = currency
-
-
-class FundingTradesChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, currency: str):
-        Channel.__init__(self, channel_id)
-        self.symbol = symbol
-        self.currency = currency
-
-
-class CandlesChannel(Channel):
-    def __init__(self, channel_id: int, key: str
-                 ):
-        Channel.__init__(self, channel_id)
-        self.key = key
+# class FundingTradesChannel(Channel):
+#     def __init__(self, channel_id: int, symbol: str, currency: str):
+#         Channel.__init__(self, channel_id)
+#         self.symbol = symbol
+#         self.currency = currency
+#
+#
+# class CandlesChannel(Channel):
+#     def __init__(self, channel_id: int, key: str
+#                  ):
+#         Channel.__init__(self, channel_id)
+#         self.key = key
 
 
 class BookChannel(Channel):
     def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book):
-        Channel.__init__(self, channel_id)
+        Channel.__init__(self, channel_id, params)
         self.symbol = symbol
         self.precision = params['prec']
         self.freq = params['freq']
@@ -141,7 +142,7 @@ class BookChannel(Channel):
 
 class FundingBookChannel(Channel):
     def __init__(self, channel_id: int, symbol: str, params: dict):
-        Channel.__init__(self, channel_id)
+        Channel.__init__(self, channel_id, params)
         self.symbol = symbol
         self.precision = params['prec']
         self.freq = params['freq']
@@ -170,32 +171,32 @@ class FundingBookChannel(Channel):
         Channel.handle_message(self, message)
 
 
-class RawBookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict):
-        Channel.__init__(self, channel_id)
-        self.symbol = symbol
-        self.precision = params['prec']
-        self.freq = params['freq']
-        self.length = params['len']
-        self.pair = params['pair']
-        # self.book = book
-
-    def handle_snapshot(self, message: list) -> bool:
-        """
-
-        :param message:
-        :return:
-        """
-        return True
-
-    def handle_update(self, message: list) -> bool:
-        """
-
-        :param message:
-        :return:
-        """
-
-        return True
-
-    def handle_message(self, message: list):
-        Channel.handle_message(self, message)
+# class RawBookChannel(Channel):
+#     def __init__(self, channel_id: int, symbol: str, params: dict):
+#         Channel.__init__(self, channel_id)
+#         self.symbol = symbol
+#         self.precision = params['prec']
+#         self.freq = params['freq']
+#         self.length = params['len']
+#         self.pair = params['pair']
+#         # self.book = book
+#
+#     def handle_snapshot(self, message: list) -> bool:
+#         """
+#
+#         :param message:
+#         :return:
+#         """
+#         return True
+#
+#     def handle_update(self, message: list) -> bool:
+#         """
+#
+#         :param message:
+#         :return:
+#         """
+#
+#         return True
+#
+#     def handle_message(self, message: list):
+#         Channel.handle_message(self, message)
