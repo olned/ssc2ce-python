@@ -18,24 +18,27 @@ __all__ = ['Channel',
 class Channel:
     def __init__(self, channel_id: int, params: dict):
         self.channel_id = channel_id
+        self.params = params
         self.on_received: Optional[Callable[[list], bool]] = None
-
         self.timestamp_present = False
-        self.sequence_present = False
         self.time_stamp_position = None
 
     def set_on_received(self, handler: Callable[[list], bool]):
         self.on_received = handler
 
-    def handle_message(self, message: list):
+    def handle_message(self, data: list):
         if self.on_received:
-            self.on_received(message)
+            self.on_received(data)
 
     def set_flags(self, flags):
         self.timestamp_present = flags & ConfigFlag.TIMESTAMP
-        self.sequence_present = flags & ConfigFlag.SEQ_ALL
-        self.time_stamp_position = 3 if self.sequence_present else 2
+        self.time_stamp_position = 3 if flags & ConfigFlag.SEQ_ALL else 2
 
+    def check_sum(self, data: list):
+        pass
+
+    def heartbeat(self, data: list):
+        pass
 
 # class TickerChannel(Channel):
 #     def __init__(self, channel_id: int, symbol: str, pair: str):

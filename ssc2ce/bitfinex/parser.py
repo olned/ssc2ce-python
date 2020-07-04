@@ -4,7 +4,12 @@ from typing import Callable, Optional, Dict
 from ssc2ce.bitfinex.icontroller import IBitfinexController
 from ssc2ce.common.abstract_parser import AbstractParser
 from .channel import *
+from .enums import ConfigFlag
 from ..common import L2Book
+
+
+class BrokenSessionError(Exception):
+    pass
 
 
 class BitfinexParser(AbstractParser):
@@ -24,6 +29,12 @@ class BitfinexParser(AbstractParser):
         self.channel_handlers: Dict[int, Callable[[list], None]] = {}
         self.books = {}
         self.last_message = None
+
+        self.timestamp_present = False
+        self.time_stamp_position = None
+        self.sequence_present = False
+        self.current_sequence = 0
+
         self.handlers: Dict[str: Callable[[dict], bool]] = {
             "subscribed": self.handle_subscribed,
             "info": self.handle_info,
@@ -52,7 +63,28 @@ class BitfinexParser(AbstractParser):
         data = json.loads(message)
 
         if isinstance(data, list):
-            self.channels[data[0]].handle_message(data)
+            if self.sequence_present:
+                self.current_sequence += 1
+                """
+                Oleg Nedbaylo: It would be more ease to get sequence from the end of list but Bitfinex writes:
+                    "!Array Length. Message (JSON array) lengths should never be hardcoded. New fields may be appended 
+                                    at the end of a message without changing version."
+                """
+                seq_pos = 2 if not isinstance(data[1], str) or data[1] == 'hb' else 3
+                new_seq = data[seq_pos]
+                if self.current_sequence != new_seq:
+                    raise BrokenSessionError(f"expected {self.current_sequence} received {new_seq} "
+                                             f"in message {self.last_message}")
+
+            if isinstance(data[1], str):
+                if data[1] == 'cs':
+                    self.channels[data[0]].check_sum(data)
+                elif data[1] == 'hb':
+                    self.channels[data[0]].heartbeat(data)
+                else:
+                    raise Exception(f"Unknown type of message {message}")
+            else:
+                self.channels[data[0]].handle_message(data)
             return True
         elif isinstance(data, dict):
             if "error" in data:
@@ -127,9 +159,14 @@ class BitfinexParser(AbstractParser):
         """{'event': 'conf', 'status': 'OK', 'flags': 98304}"""
         status = message["status"]
         flags = message.get("flags", 0)
+        self.timestamp_present = flags & ConfigFlag.TIMESTAMP
+        self.sequence_present = flags & ConfigFlag.SEQ_ALL
+
         if flags:
-            if self.on_conf:
-                self.on_conf(status, flags)
+            self.time_stamp_position = 3 if self.sequence_present else 2
+
+        if self.on_conf:
+            self.on_conf(status, flags)
         return True
 
     def handle_pong(self, message: dict) -> bool:
