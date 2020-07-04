@@ -16,8 +16,7 @@ class Bitfinex(SessionWrapper, IBitfinexController):
     receipt_time = None
     is_connected = False
 
-    def __init__(self,
-                 flags: ConfigFlag = ConfigFlag.TIMESTAMP | ConfigFlag.SEQ_ALL):
+    def __init__(self, flags: ConfigFlag = ConfigFlag.NONE):
         """
 
         :param flags: a bitwise XOR of the different options:
