@@ -17,6 +17,7 @@ class L2Book(BookEventHandlerHolder):
         self._instrument = instrument
         self._bids = L2BookSide(is_bids=True)
         self._asks = L2BookSide(is_bids=False)
+        self.exchange_timestamp = None
 
     def instrument(self) -> str:
         return self._instrument
@@ -41,3 +42,6 @@ class L2Book(BookEventHandlerHolder):
 
     def valid(self) -> bool:
         return len(self._asks.data) != 0 and len(self._bids.data) != 0
+
+    def set_exchange_ts(self, exchange_ts):
+        self.exchange_timestamp = exchange_ts
