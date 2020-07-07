@@ -30,6 +30,7 @@ class BitfinexParser(AbstractParser):
         self.books = {}
         self.last_message = None
 
+        self.flags = 0
         self.timestamp_present = False
         self.time_stamp_position = None
         self.sequence_present = False
@@ -159,11 +160,15 @@ class BitfinexParser(AbstractParser):
         """{'event': 'conf', 'status': 'OK', 'flags': 98304}"""
         status = message["status"]
         flags = message.get("flags", 0)
+        self.flags = flags
         self.timestamp_present = flags & ConfigFlag.TIMESTAMP
         self.sequence_present = flags & ConfigFlag.SEQ_ALL
 
         if flags:
             self.time_stamp_position = 3 if self.sequence_present else 2
+
+        for channel in self.channels.values():
+            channel.set_flags(flags)
 
         if self.on_conf:
             self.on_conf(status, flags)
@@ -212,9 +217,9 @@ class BitfinexParser(AbstractParser):
         if precision == 'R0':
             channel = Channel(channel_id, message)
         elif symbol[0] == 't':
-            channel = BookChannel(channel_id, symbol, message, book)
+            channel = BookChannel(channel_id, symbol, message, book, self.flags)
         else:
-            channel = FundingBookChannel(channel_id, symbol, message)
+            channel = FundingBookChannel(channel_id, symbol, message, self.flags)
 
         self.channels[channel_id] = channel
         return channel
@@ -223,9 +228,9 @@ class BitfinexParser(AbstractParser):
         channel_id = message['chanId']
         symbol = message['symbol']
         if symbol[0] == 't':
-            channel = Channel(channel_id, message)
+            channel = Channel(channel_id, message, self.flags)
         else:
-            channel = Channel(channel_id, message)
+            channel = Channel(channel_id, message, self.flags)
 
         self.channels[channel_id] = channel
         return channel
@@ -234,15 +239,15 @@ class BitfinexParser(AbstractParser):
         channel_id = message['chanId']
         symbol = message['symbol']
         if symbol[0] == 't':
-            channel = Channel(channel_id, message)
+            channel = Channel(channel_id, message, self.flags)
         else:
-            channel = Channel(channel_id, message)
+            channel = Channel(channel_id, message, self.flags)
         self.channels[channel_id] = channel
         return channel
 
     def handle_candles_subscribed(self, message: dict) -> Channel:
         channel_id = message['chanId']
-        channel = Channel(channel_id, message)
+        channel = Channel(channel_id, message, self.flags)
 
         self.channels[channel_id] = channel
         return channel

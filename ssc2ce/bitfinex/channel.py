@@ -16,28 +16,36 @@ __all__ = ['Channel',
 
 
 class Channel:
-    def __init__(self, channel_id: int, params: dict):
+    def __init__(self, channel_id: int, params: dict, flags):
+        self.set_flags(flags)
         self.channel_id = channel_id
         self.params = params
         self.on_received: Optional[Callable[[list], bool]] = None
         self.timestamp_present = False
         self.time_stamp_position = None
+        self.exchange_ts = None
 
     def set_on_received(self, handler: Callable[[list], bool]):
         self.on_received = handler
 
     def handle_message(self, data: list):
+        if self.timestamp_present:
+            self.exchange_ts = data[self.time_stamp_position]
         if self.on_received:
             self.on_received(data)
 
     def set_flags(self, flags):
-        self.timestamp_present = flags & ConfigFlag.TIMESTAMP
+        self.timestamp_present = bool(flags & int(ConfigFlag.TIMESTAMP))
         self.time_stamp_position = 3 if flags & ConfigFlag.SEQ_ALL else 2
 
     def check_sum(self, data: list):
+        if self.timestamp_present:
+            self.exchange_ts = data[self.time_stamp_position + 1]
         pass
 
     def heartbeat(self, data: list):
+        if self.timestamp_present:
+            self.exchange_ts = data[self.time_stamp_position]
         pass
 
 # class TickerChannel(Channel):
@@ -76,8 +84,8 @@ class Channel:
 
 
 class BookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book):
-        Channel.__init__(self, channel_id, params)
+    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book, flags):
+        Channel.__init__(self, channel_id, params, flags)
         self.symbol = symbol
         self.precision = params['prec']
         self.freq = params['freq']
@@ -105,6 +113,9 @@ class BookChannel(Channel):
         if self.book.on_book_setup and self.book.valid():
             self.book.on_book_setup(self.book)
 
+        if self.timestamp_present and self.exchange_ts:
+            self.book.set_exchange_ts(self.exchange_ts)
+
         return True
 
     def handle_update(self, message: list) -> bool:
@@ -130,22 +141,29 @@ class BookChannel(Channel):
         if self.book.on_book_update and self.book.valid():
             self.book.on_book_update(self.book)
 
+        if self.timestamp_present and self.exchange_ts:
+            self.book.set_exchange_ts(self.exchange_ts)
+
         return True
 
     def handle_message(self, message: list):
         data = message[1]
+        if self.timestamp_present:
+            self.exchange_ts = message[self.time_stamp_position]
+
         if isinstance(data, list):
             if isinstance(data[0], list):
                 self.handle_snapshot(message)
             else:
                 self.handle_update(message)
 
-        Channel.handle_message(self, message)
+        if self.on_received:
+            self.on_received(data)
 
 
 class FundingBookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict):
-        Channel.__init__(self, channel_id, params)
+    def __init__(self, channel_id: int, symbol: str, params: dict, flags):
+        Channel.__init__(self, channel_id, params, flags)
         self.symbol = symbol
         self.precision = params['prec']
         self.freq = params['freq']
