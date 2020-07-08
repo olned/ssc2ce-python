@@ -16,7 +16,7 @@ __all__ = ['Channel',
 
 
 class Channel:
-    def __init__(self, channel_id: int, params: dict, flags):
+    def __init__(self, channel_id: int, params: dict, flags: ConfigFlag):
         self.set_flags(flags)
         self.channel_id = channel_id
         self.params = params
@@ -34,9 +34,9 @@ class Channel:
         if self.on_received:
             self.on_received(data)
 
-    def set_flags(self, flags):
-        self.timestamp_present = bool(flags & int(ConfigFlag.TIMESTAMP))
-        self.time_stamp_position = 3 if flags & ConfigFlag.SEQ_ALL else 2
+    def set_flags(self, flags: ConfigFlag):
+        self.timestamp_present = ConfigFlag.TIMESTAMP in flags
+        self.time_stamp_position = 3 if ConfigFlag.SEQ_ALL in flags else 2
 
     def check_sum(self, data: list):
         if self.timestamp_present:
@@ -84,7 +84,7 @@ class Channel:
 
 
 class BookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book, flags):
+    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book, flags: ConfigFlag):
         Channel.__init__(self, channel_id, params, flags)
         self.symbol = symbol
         self.precision = params['prec']
@@ -162,7 +162,7 @@ class BookChannel(Channel):
 
 
 class FundingBookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict, flags):
+    def __init__(self, channel_id: int, symbol: str, params: dict, flags: ConfigFlag):
         Channel.__init__(self, channel_id, params, flags)
         self.symbol = symbol
         self.precision = params['prec']

@@ -1,7 +1,7 @@
-from enum import IntEnum
+from enum import IntFlag, IntEnum
 
 
-class ConfigFlag(IntEnum):
+class ConfigFlag(IntFlag):
     """
         DEC_AS_STR - 8 - enable all decimals as strings
         TIME_S - 32 - Enable all timestamps as strings
@@ -13,7 +13,6 @@ class ConfigFlag(IntEnum):
                       Maybe I have been doing something wrong, I don’t know ...
 
     """
-    NONE = 0,
     DEC_AS_STR = 8
     TIME_S = 32
     TIMESTAMP = 32768

@@ -16,7 +16,7 @@ class Bitfinex(SessionWrapper, IBitfinexController):
     receipt_time = None
     is_connected = False
 
-    def __init__(self, flags: ConfigFlag = ConfigFlag.NONE):
+    def __init__(self, flags: ConfigFlag = None):
         """
 
         :param flags: a bitwise XOR of the different options:
@@ -32,7 +32,7 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         self.on_check_version: Callable[[int], bool] = self.check_version
         self.on_maintenance = None
         self.ws_api = 'wss://api-pub.bitfinex.com/ws/2'
-        self.flags = flags
+        self.flags = flags if flags is not None else ConfigFlag
         self.logger = logging.getLogger(__name__)
         self.parser = BitfinexParser()
         self.parser.set_controller(self)
@@ -133,8 +133,8 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         if flags is not None:
             self.flags = flags
 
-        if self.flags is not None:
-            request = dict(event="conf", flags=self.flags)
+        if flags is not None:
+            request = dict(event="conf", flags=self.flags.value)
             await self.ws.send_json(request)
 
     async def request_ping(self):

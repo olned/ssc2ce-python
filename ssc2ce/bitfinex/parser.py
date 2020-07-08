@@ -30,7 +30,7 @@ class BitfinexParser(AbstractParser):
         self.books = {}
         self.last_message = None
 
-        self.flags = 0
+        self.flags = ConfigFlag
         self.timestamp_present = False
         self.time_stamp_position = None
         self.sequence_present = False
@@ -159,19 +159,18 @@ class BitfinexParser(AbstractParser):
     def handle_conf(self, message: dict) -> bool:
         """{'event': 'conf', 'status': 'OK', 'flags': 98304}"""
         status = message["status"]
-        flags = message.get("flags", 0)
-        self.flags = flags
-        self.timestamp_present = flags & ConfigFlag.TIMESTAMP
-        self.sequence_present = flags & ConfigFlag.SEQ_ALL
+        self.flags = ConfigFlag(message.get("flags", 0))
+        self.timestamp_present = self.flags & ConfigFlag.TIMESTAMP
+        self.sequence_present = self.flags & ConfigFlag.SEQ_ALL
 
-        if flags:
+        if self.flags:
             self.time_stamp_position = 3 if self.sequence_present else 2
 
         for channel in self.channels.values():
-            channel.set_flags(flags)
+            channel.set_flags(self.flags)
 
         if self.on_conf:
-            self.on_conf(status, flags)
+            self.on_conf(status, self.flags)
         return True
 
     def handle_pong(self, message: dict) -> bool:

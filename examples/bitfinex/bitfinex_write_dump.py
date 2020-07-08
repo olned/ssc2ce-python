@@ -42,7 +42,7 @@ def stop():
 
 
 def reset_config():
-    asyncio.ensure_future(conn.configure(ConfigFlag.NONE))
+    asyncio.ensure_future(conn.configure(ConfigFlag))
 
 
 def set_config_1():
@@ -58,10 +58,10 @@ def set_config_3():
 
 
 loop = asyncio.get_event_loop()
-loop.call_later(30, reset_config)
-loop.call_later(60, set_config_1)
-loop.call_later(90, set_config_2)
-loop.call_later(120, set_config_3)
+# loop.call_later(30, reset_config)
+# loop.call_later(60, set_config_1)
+# loop.call_later(90, set_config_2)
+# loop.call_later(120, set_config_3)
 loop.call_later(3600, stop)
 
 try:
