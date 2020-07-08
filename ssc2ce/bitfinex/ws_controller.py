@@ -133,7 +133,7 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         if flags is not None:
             self.flags = flags
 
-        if flags is not None:
+        if self.flags is not None:
             request = dict(event="conf", flags=self.flags.value)
             await self.ws.send_json(request)
 
