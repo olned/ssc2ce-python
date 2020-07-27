@@ -5,12 +5,12 @@ VERY_SMALL_NUMBER = 1e-11
 
 class L2BookSide:
 
-    def __init__(self, is_bids: bool):
-        if is_bids:
+    def __init__(self, is_descending: bool):
+        if is_descending:
             self.data = SortedKeyList(key=lambda val: -val[0])
         else:
             self.data = SortedKeyList(key=lambda val: val[0])
-        self.is_bids = is_bids
+        self.is_descending = is_descending
         self.time = None
 
     def fill(self, source):
@@ -22,7 +22,7 @@ class L2BookSide:
         self.data.add([price, size])
 
     def update(self, price: float, size: float):
-        key = -price if self.is_bids else price
+        key = -price if self.is_descending else price
         i = self.data.bisect_key_left(key)
 
         if 0 <= i < len(self.data):

@@ -15,8 +15,8 @@ class L2Book(BookEventHandlerHolder):
 
         BookEventHandlerHolder.__init__(self)
         self._instrument = instrument
-        self._bids = L2BookSide(is_bids=True)
-        self._asks = L2BookSide(is_bids=False)
+        self._bids = L2BookSide(is_descending=True)
+        self._asks = L2BookSide(is_descending=False)
         self.exchange_timestamp = None
 
     def instrument(self) -> str:
