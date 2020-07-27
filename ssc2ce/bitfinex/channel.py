@@ -1,6 +1,7 @@
-from typing import Optional, Callable
+from typing import Optional, Callable, Type
 
 from ssc2ce.bitfinex.enums import ConfigFlag
+from ssc2ce.bitfinex.l2_funding_book import L2FundingBook
 from ssc2ce.common import L2Book
 
 __all__ = ['Channel',
@@ -16,7 +17,7 @@ __all__ = ['Channel',
 
 
 class Channel:
-    def __init__(self, channel_id: int, params: dict, flags: ConfigFlag):
+    def __init__(self, channel_id: int, params: dict, flags: Type[ConfigFlag]):
         self.set_flags(flags)
         self.channel_id = channel_id
         self.params = params
@@ -34,7 +35,7 @@ class Channel:
         if self.on_received:
             self.on_received(data)
 
-    def set_flags(self, flags: ConfigFlag):
+    def set_flags(self, flags: Type[ConfigFlag]):
         self.timestamp_present = ConfigFlag.TIMESTAMP in flags
         self.time_stamp_position = 3 if ConfigFlag.SEQ_ALL in flags else 2
 
@@ -84,7 +85,7 @@ class Channel:
 
 
 class BookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book, flags: ConfigFlag):
+    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book, flags: Type[ConfigFlag]):
         Channel.__init__(self, channel_id, params, flags)
         self.symbol = symbol
         self.precision = params['prec']
@@ -162,14 +163,14 @@ class BookChannel(Channel):
 
 
 class FundingBookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict, flags: ConfigFlag):
+    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2FundingBook, flags: Type[ConfigFlag]):
         Channel.__init__(self, channel_id, params, flags)
         self.symbol = symbol
         self.precision = params['prec']
         self.freq = params['freq']
         self.length = params['len']
         self.currency = params['currency']
-        # self.book = book
+        self.book = book
 
     def handle_snapshot(self, message: list) -> bool:
         """
@@ -177,6 +178,23 @@ class FundingBookChannel(Channel):
         :param message:
         :return:
         """
+
+        self.book.clear()
+
+        for item in message[1]:
+            count = item[2]
+            size = item[3]
+            if count:
+                if size < 0:
+                    self.book.asks.add(item[0], -size)
+                else:
+                    self.book.bids.add(item[0], size)
+
+        if self.book.on_book_setup and self.book.valid():
+            self.book.on_book_setup(self.book)
+
+        if self.timestamp_present and self.exchange_ts:
+            self.book.set_exchange_ts(self.exchange_ts)
         return True
 
     def handle_update(self, message: list) -> bool:
@@ -186,10 +204,41 @@ class FundingBookChannel(Channel):
         :return:
         """
 
+        item = message[1]
+        count = item[2]
+        size = item[3]
+        if count:
+            if size < 0:
+                self.book.asks.update(item[0], -size)
+            else:
+                self.book.bids.update(item[0], size)
+        else:
+            if size < 0:
+                self.book.asks.update(item[0], 0.)
+            else:
+                self.book.bids.update(item[0], 0.)
+
+        if self.book.on_book_update and self.book.valid():
+            self.book.on_book_update(self.book)
+
+        if self.timestamp_present and self.exchange_ts:
+            self.book.set_exchange_ts(self.exchange_ts)
+
         return True
 
     def handle_message(self, message: list):
-        Channel.handle_message(self, message)
+        data = message[1]
+        if self.timestamp_present:
+            self.exchange_ts = message[self.time_stamp_position]
+
+        if isinstance(data, list):
+            if isinstance(data[0], list):
+                self.handle_snapshot(message)
+            else:
+                self.handle_update(message)
+
+        if self.on_received:
+            self.on_received(data)
 
 
 # class RawBookChannel(Channel):
