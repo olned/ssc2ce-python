@@ -5,6 +5,7 @@ from ssc2ce.bitfinex.icontroller import IBitfinexController
 from ssc2ce.common.abstract_parser import AbstractParser
 from .channel import *
 from .enums import ConfigFlag
+from .l2_funding_book import L2FundingBook
 from ..common import L2Book
 
 
@@ -28,6 +29,7 @@ class BitfinexParser(AbstractParser):
         self.subscriptions = []
         self.channel_handlers: Dict[int, Callable[[list], None]] = {}
         self.books = {}
+        self.funding_books = {}
         self.last_message = None
 
         self.flags = ConfigFlag
@@ -129,6 +131,21 @@ class BitfinexParser(AbstractParser):
 
         return book
 
+    def get_funding_book(self, instrument: str) -> L2FundingBook:
+        book: L2FundingBook = self.funding_books.get(instrument)
+        if book is None:
+            book = L2FundingBook(instrument)
+
+            if self.on_book_setup:
+                book.set_on_book_setup(self.on_book_setup)
+
+            if self.on_book_update:
+                book.set_on_book_update(self.on_book_update)
+
+            self.books[instrument] = book
+
+        return book
+
     def handle_info(self, message: dict) -> bool:
         if "version" in message:
             """
@@ -211,14 +228,16 @@ class BitfinexParser(AbstractParser):
     def handle_book_subscribed(self, message: dict) -> Channel:
         channel_id = message['chanId']
         symbol = message['symbol']
-        book = self.get_book(symbol)
+
         precision = message['prec']
         if precision == 'R0':
             channel = Channel(channel_id, message)
         elif symbol[0] == 't':
+            book = self.get_book(symbol)
             channel = BookChannel(channel_id, symbol, message, book, self.flags)
         else:
-            channel = FundingBookChannel(channel_id, symbol, message, self.flags)
+            book = self.get_funding_book(symbol)
+            channel = FundingBookChannel(channel_id, symbol, message, book, self.flags)
 
         self.channels[channel_id] = channel
         return channel
