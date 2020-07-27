@@ -9,20 +9,19 @@ from ssc2ce.bitfinex.enums import ConfigFlag
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
 logger = logging.getLogger("bitfinex-basic-example")
 
-conn = Bitfinex(ConfigFlag.TIMESTAMP | ConfigFlag.SEQ_ALL | ConfigFlag.OB_CHECKSUM)
+flags = ConfigFlag(ConfigFlag.TIMESTAMP | ConfigFlag.SEQ_ALL | ConfigFlag.OB_CHECKSUM)
+conn = Bitfinex(flags)
 
-
-# ConfigFlag.TIMESTAMP | ConfigFlag.SEQ_ALL
 
 async def subscribe():
-    # await conn.subscribe_ticker("tBTCUSD")
+    await conn.subscribe_ticker("tBTCUSD")
     await conn.subscribe_book("tBTCUSD")
-    # await conn.subscribe_trades("tBTCUSD")
-    # await conn.subscribe_candles("tBTCUSD")
-    # await conn.subscribe_raw_book("tBTCUSD")
-    # await conn.subscribe_ticker("fUSD")
-    # await conn.subscribe_book("fUSD")
-    # await conn.subscribe_trades("fUSD")
+    await conn.subscribe_trades("tBTCUSD")
+    await conn.subscribe_candles("tBTCUSD")
+    await conn.subscribe_raw_book("tBTCUSD")
+    await conn.subscribe_ticker("fUSD")
+    await conn.subscribe_book("fUSD")
+    await conn.subscribe_trades("fUSD")
 
 
 start_at = "{0:%Y_%m_%d_%H_%M_%S}".format(datetime.utcnow())
