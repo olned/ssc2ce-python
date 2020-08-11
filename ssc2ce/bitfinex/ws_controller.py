@@ -2,7 +2,6 @@ import asyncio
 import logging
 from typing import Optional, Callable, Any, Awaitable
 
-from ssc2ce.bitfinex.enums import ConfigFlag
 from ssc2ce.bitfinex.icontroller import IBitfinexController
 from ssc2ce.bitfinex.parser import BitfinexParser
 from ssc2ce.common.session import SessionWrapper
@@ -16,7 +15,7 @@ class Bitfinex(SessionWrapper, IBitfinexController):
     receipt_time = None
     is_connected = False
 
-    def __init__(self, flags: ConfigFlag = None):
+    def __init__(self, flags: int = 0):
         """
 
         :param flags: a bitwise XOR of the different options:
@@ -30,9 +29,9 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         super().__init__()
         self.server_version = None
         self.on_check_version: Callable[[int], bool] = self.check_version
-        self.on_maintenance = None
+        self.on_maintenance: Optional[Awaitable[[int], None]] = None
         self.ws_api = 'wss://api-pub.bitfinex.com/ws/2'
-        self.flags = flags if flags is not None else ConfigFlag
+        self.flags = flags
         self.logger = logging.getLogger(__name__)
         self.parser = BitfinexParser()
         self.parser.set_controller(self)
@@ -73,7 +72,8 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         """
         self.server_version = version
         if version != 2:
-            self.logger.error(f"Bitfinex connector support only version 2 but receive {version}")
+            self.logger.error(
+                f"Bitfinex connector support only version 2 but receive {version}")
             return False
         else:
             return True
@@ -124,7 +124,7 @@ class Bitfinex(SessionWrapper, IBitfinexController):
         else:
             pass
 
-    async def configure(self, flags: ConfigFlag = None):
+    async def configure(self, flags: int = None):
         """
 
         :param flags:
@@ -134,7 +134,8 @@ class Bitfinex(SessionWrapper, IBitfinexController):
             self.flags = flags
 
         if self.flags is not None:
-            request = dict(event="conf", flags=self.flags.value)
+            request = dict(event="conf", flags=self.flags)
+            self.logger.info(repr(request))
             await self.ws.send_json(request)
 
     async def request_ping(self):
@@ -179,7 +180,8 @@ class Bitfinex(SessionWrapper, IBitfinexController):
             "symbol": symbol
         }, handler)
 
-    async def subscribe_trades(self, symbol: str,
+    async def subscribe_trades(self,
+                               symbol: str,
                                handler: Optional[Callable[[list], None]] = None):
         """
         Subscribe to trades channel

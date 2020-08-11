@@ -3,8 +3,8 @@ from typing import Callable, Optional, Dict
 
 from ssc2ce.bitfinex.icontroller import IBitfinexController
 from ssc2ce.common.abstract_parser import AbstractParser
-from .channel import *
-from .enums import ConfigFlag
+from .channel import Channel, BookChannel, FundingBookChannel
+from .config_flags import ConfigFlag
 from .l2_funding_book import L2FundingBook
 from ..common import L2Book
 
@@ -21,7 +21,8 @@ class BitfinexParser(AbstractParser):
     def __init__(self):
         AbstractParser.__init__(self)
         self.controller: Optional[IBitfinexController] = None
-        self.on_handle_version_info: Optional[Callable[[int, int], None]] = None
+        self.on_handle_version_info: Optional[Callable[[
+            int, int], None]] = None
         self.on_conf: Optional[Callable[[str, int], None]] = None
         self.on_pong: Optional[Callable[[int, int], None]] = None
         self.on_error: Optional[Callable[[int], None]] = None
@@ -32,7 +33,7 @@ class BitfinexParser(AbstractParser):
         self.funding_books = {}
         self.last_message = None
 
-        self.flags = ConfigFlag
+        self.flags: int = 0
         self.timestamp_present = False
         self.time_stamp_position = None
         self.sequence_present = False
@@ -73,7 +74,8 @@ class BitfinexParser(AbstractParser):
                     "!Array Length. Message (JSON array) lengths should never be hardcoded. New fields may be appended 
                                     at the end of a message without changing version."
                 """
-                seq_pos = 2 if not isinstance(data[1], str) or data[1] == 'hb' else 3
+                seq_pos = 2 if not isinstance(
+                    data[1], str) or data[1] == 'hb' else 3
                 new_seq = data[seq_pos]
                 if self.current_sequence != new_seq:
                     raise BrokenSessionError(f"expected {self.current_sequence} received {new_seq} "
@@ -84,8 +86,11 @@ class BitfinexParser(AbstractParser):
                     self.channels[data[0]].check_sum(data)
                 elif data[1] == 'hb':
                     self.channels[data[0]].heartbeat(data)
+                elif data[1] == 'tu' or data[1] == 'te':
+                    self.channels[data[0]].handle_message(data)
                 else:
                     raise Exception(f"Unknown type of message {message}")
+                    # return False
             else:
                 self.channels[data[0]].handle_message(data)
             return True
@@ -95,9 +100,10 @@ class BitfinexParser(AbstractParser):
                     self.on_error(data["error_code"])
                     return True
             else:
-                event_mane = data.get("event")
-                if event_mane:
-                    handler: Optional[Callable[[dict], bool]] = self.handlers.get(event_mane)
+                event_name = data.get("event")
+                if event_name:
+                    handler: Optional[Callable[[dict], bool]
+                                      ] = self.handlers.get(event_name)
                     if handler:
                         ok = handler(data)
                         return ok
@@ -158,7 +164,8 @@ class BitfinexParser(AbstractParser):
             }
             """
             if self.on_handle_version_info:
-                self.on_handle_version_info(message["version"], message["platform"]["status"])
+                self.on_handle_version_info(
+                    message["version"], message["platform"]["status"])
             return True
 
         """
@@ -176,7 +183,7 @@ class BitfinexParser(AbstractParser):
     def handle_conf(self, message: dict) -> bool:
         """{'event': 'conf', 'status': 'OK', 'flags': 98304}"""
         status = message["status"]
-        self.flags = ConfigFlag(message.get("flags", 0))
+        self.flags = message.get("flags", 0)
         self.timestamp_present = self.flags & ConfigFlag.TIMESTAMP
         self.sequence_present = self.flags & ConfigFlag.SEQ_ALL
 
@@ -197,16 +204,19 @@ class BitfinexParser(AbstractParser):
 
     def handle_subscribed(self, message: dict) -> bool:
         channel_name = message.get('channel')
-        handler: Optional[Callable[[dict], Channel]] = self.subscription_handlers.get(channel_name)
+        handler: Optional[Callable[[dict], Channel]
+                          ] = self.subscription_handlers.get(channel_name)
         if handler:
             channel = handler(message)
 
             idx = None
-            y = [(i[0], i[1] if isinstance(i[1], str) else str(i[1])) for i in message.items()]
+            y = [(i[0], i[1] if isinstance(i[1], str) else str(i[1]))
+                 for i in message.items()]
 
             for i, s in enumerate(self.subscriptions):
                 ok = True
-                z = [(i[0], i[1] if isinstance(i[1], str) else str(i[1])) for i in s[0].items()]
+                z = [(i[0], i[1] if isinstance(i[1], str) else str(i[1]))
+                     for i in s[0].items()]
                 for x in z:
                     if x not in y:
                         ok = False
@@ -231,13 +241,15 @@ class BitfinexParser(AbstractParser):
 
         precision = message['prec']
         if precision == 'R0':
-            channel = Channel(channel_id, message)
+            channel = Channel(channel_id, message, self.flags)
         elif symbol[0] == 't':
             book = self.get_book(symbol)
-            channel = BookChannel(channel_id, symbol, message, book, self.flags)
+            channel = BookChannel(channel_id, symbol,
+                                  message, book, self.flags)
         else:
             book = self.get_funding_book(symbol)
-            channel = FundingBookChannel(channel_id, symbol, message, book, self.flags)
+            channel = FundingBookChannel(
+                channel_id, symbol, message, book, self.flags)
 
         self.channels[channel_id] = channel
         return channel
