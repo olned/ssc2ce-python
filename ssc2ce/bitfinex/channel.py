@@ -1,6 +1,6 @@
 from typing import Optional, Callable, Type
 
-from ssc2ce.bitfinex.enums import ConfigFlag
+from ssc2ce.bitfinex.config_flags import ConfigFlag
 from ssc2ce.bitfinex.l2_funding_book import L2FundingBook
 from ssc2ce.common import L2Book
 
@@ -17,7 +17,7 @@ __all__ = ['Channel',
 
 
 class Channel:
-    def __init__(self, channel_id: int, params: dict, flags: Type[ConfigFlag]):
+    def __init__(self, channel_id: int, params: dict, flags: int):
         self.set_flags(flags)
         self.channel_id = channel_id
         self.params = params
@@ -32,12 +32,13 @@ class Channel:
     def handle_message(self, data: list):
         if self.timestamp_present:
             self.exchange_ts = data[self.time_stamp_position]
+            
         if self.on_received:
             self.on_received(data)
 
-    def set_flags(self, flags: Type[ConfigFlag]):
-        self.timestamp_present = ConfigFlag.TIMESTAMP in flags
-        self.time_stamp_position = 3 if ConfigFlag.SEQ_ALL in flags else 2
+    def set_flags(self, flags: int):
+        self.timestamp_present = bool(ConfigFlag.TIMESTAMP & flags)
+        self.time_stamp_position = 3 if bool(ConfigFlag.SEQ_ALL & flags) else 2
 
     def check_sum(self, data: list):
         if self.timestamp_present:
@@ -85,7 +86,7 @@ class Channel:
 
 
 class BookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book, flags: Type[ConfigFlag]):
+    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2Book, flags: int):
         Channel.__init__(self, channel_id, params, flags)
         self.symbol = symbol
         self.precision = params['prec']
@@ -163,7 +164,7 @@ class BookChannel(Channel):
 
 
 class FundingBookChannel(Channel):
-    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2FundingBook, flags: Type[ConfigFlag]):
+    def __init__(self, channel_id: int, symbol: str, params: dict, book: L2FundingBook, flags: int):
         Channel.__init__(self, channel_id, params, flags)
         self.symbol = symbol
         self.precision = params['prec']

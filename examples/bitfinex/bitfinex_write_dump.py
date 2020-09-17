@@ -4,12 +4,12 @@ import logging
 from datetime import datetime
 
 from ssc2ce import Bitfinex
-from ssc2ce.bitfinex.enums import ConfigFlag
+from ssc2ce.bitfinex.config_flags import ConfigFlag
 
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
 logger = logging.getLogger("bitfinex-basic-example")
 
-flags = ConfigFlag(ConfigFlag.TIMESTAMP | ConfigFlag.SEQ_ALL | ConfigFlag.OB_CHECKSUM)
+flags = ConfigFlag.TIMESTAMP | ConfigFlag.SEQ_ALL | ConfigFlag.OB_CHECKSUM
 conn = Bitfinex(flags)
 
 
@@ -41,7 +41,7 @@ def stop():
 
 
 def reset_config():
-    asyncio.ensure_future(conn.configure(ConfigFlag))
+    asyncio.ensure_future(conn.configure(0))
 
 
 def set_config_1():
