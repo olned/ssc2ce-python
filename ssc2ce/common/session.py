@@ -180,7 +180,11 @@ class SessionWrapper:
 
     async def stop(self):
         await self.ws.close()
-        await self._session.close()
+        
+        if self.__internal_session and self.__session:
+            await self.__session.close()
+            self.__session = None
+            self.__is_session = False
 
     def is_connected(self) -> bool:
         if self.ws is None:
