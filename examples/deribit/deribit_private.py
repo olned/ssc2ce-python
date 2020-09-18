@@ -98,7 +98,7 @@ class MyApp:
     async def printer(self, **kwargs):
         self.logger.info(f"{repr(kwargs)}")
 
-    @ staticmethod
+    @staticmethod
     def resolve_route(value, routes):
         key, handler = None, None
         for key, handler in routes:

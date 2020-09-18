@@ -92,12 +92,6 @@ class Deribit(SessionWrapper):
     def close(self):
         super()._close()
 
-    async def stop(self):
-        """
-        Close connection and break the receiver loop
-        :return:
-        """
-        await self.ws.close()
 
     async def send_public(self, request: dict, callback=None, logging_it: bool = True) -> int:
         """
