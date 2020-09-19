@@ -32,7 +32,8 @@ class SessionWrapper:
         self._async_on_connect: Optional[Callable[[], Awaitable[Any]]] = None
 
         self._on_message: Optional[Callable[[str], bool]] = None
-        self._async_on_message: Optional[Callable[[str], Awaitable[bool]]] = None
+        self._async_on_message: Optional[Callable[[
+            str], Awaitable[bool]]] = None
 
         self.on_close_ws: Optional[Callable[[], Any]] = None
         self.on_before_handling: Optional[Callable[[str], Any]] = None
@@ -70,18 +71,19 @@ class SessionWrapper:
             self.__session = aiohttp.ClientSession(timeout=self._timeout)
 
     def __del__(self):
-        self._close()
+        asyncio.ensure_future(self._close())
 
     def __enter__(self):
         self.__check_session()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        self._close()
+        asyncio.ensure_future(self._close())
 
-    def _close(self):
+    async def _close(self):
         if self.__internal_session and self.__session:
-            asyncio.ensure_future(self.__session.close())
+            await self.__session.close()
+            self.__session = None
             self.__is_session = False
 
     @property
@@ -187,16 +189,23 @@ class SessionWrapper:
                 if response.content_type.endswith('json'):
                     data = json.loads(data)
                 else:
-                    logger.warning(f"Unexpected response.content_type:{response.content_type}")
+                    logger.warning(
+                        f"Unexpected response.content_type:{response.content_type}")
                 return data
             else:
                 response.raise_for_status()
 
     async def stop(self):
         """
-        Close connection and break the receiver loop
+        Stop run receiver
+        Close websocket connection and session if it is created inside self
         :return:
         """
-
         await self.ws.close()
-        self._close()
+        await self._close()
+
+    def is_connected(self) -> bool:
+        if self.ws is None:
+            return False
+
+        return not self.ws.closed
