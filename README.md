@@ -1,8 +1,14 @@
 # ssc2ce
-A Set of Simple Connectors for access To Cryptocurrency Exchanges via websocket based on
- [aiohttp](https://aiohttp.readthedocs.io) .
+A set of simple connectors for access to few cryptocurrency Exchanges via websocket based on
+ [aiohttp](https://aiohttp.readthedocs.io).
 
-This is more of a pilot project, if you have any wishes for adding exchanges or expanding functionality, please register issues
+Supported Exchanges:
+- Bitfinex - only public API,
+- CEX.io,
+- Coinbase Pro
+- Deribit
+    
+This is more of a pilot project, if you have any wishes for adding exchanges or expanding functionality, please register issues.
 
 ## Installation
 Install ssc2ce with:
@@ -23,7 +29,7 @@ from ssc2ce import Bitfinex
 conn = Bitfinex()
 
 
-async def handle_subscription(data, connector: Bitfinex):
+def handle_subscription(data, connector: Bitfinex):
     print(data, f"received:{connector.receipt_time}")
 
 
@@ -90,20 +96,15 @@ except KeyboardInterrupt:
 ```
 ## Run examples from a clone
 
-If you clone repository you can run examples from the root directory.
+If you clone repository you can run examples in docker container.
 
 ```bash
-$ PYTHONPATH=.:$PYTHONPATH python examples/bitfinex_basic_example.py
+make run cmd='python src/examples/bitfinex/bitfinex_basic_example.py'
 ```
 
-To run some examples, you may need additional modules, you can install them from the `requirements.txt` file.
+
+To run the private.py example, you must create and fill in the .env file, look at .env.example
 
 ```bash
-$ pip install -r requirements.txt
-```
-
-To run the private.py example, you must either fill in the .env file or set the environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET. Look at .env_default. 
-
-```bash
-$ PYTHONPATH=.:$PYTHONPATH DERIBIT_CLIENT_ID=YOU_ACCESS_KEY DERIBIT_CLIENT_SECRET=YOU_ACCESS_SECRET python examples/deribit_private.py
+make run cmd='python src/examples/deribit/deribit_private.py'
 ```

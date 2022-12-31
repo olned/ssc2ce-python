@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "deribit-private",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/examples/deribit/deribit_private.py",
+            // "cwd":"${workspaceFolder}/src/examples",
+            "console": "integratedTerminal",
+            "env": {}
+        },
+        {
+            "name": "coinbase pro private",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/examples/coinbase/coinbase_pro_private.py",
+            // "cwd":"${workspaceFolder}/src/examples",
+            "console": "integratedTerminal",
+            "env": {}
+        }
+    ]
+}

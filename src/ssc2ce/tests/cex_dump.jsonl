@@ -1,0 +1,25 @@
+{"e":"order-book-subscribe","data":{"timestamp":1592818373,"bids":[[8391.9,0.80000000],[8391.8,1.00000000],[8390.3,0.10000000]],"asks":[[8420.3,0.10000000],[8425.7,2.00000000],[8431.8,1.00000000]],"pair":"BTC:EUR","id":346224380,"sell_total":"174.83008048","buy_total":"1286942.49"},"oid":"book-1", "ok":"ok"}
+{"e":"md_update","data":{"id":346224381,"pair":"BTC:EUR","time":1592818381264,"bids":[],"asks":[[8431.8,0.00000000]]}}
+{"e":"md_update","data":{"id":346224382,"pair":"BTC:EUR","time":1592818381265,"bids":[[8391.8,0.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224383,"pair":"BTC:EUR","time":1592818381293,"bids":[[8391.9,0.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224384,"pair":"BTC:EUR","time":1592818381351,"bids":[],"asks":[[8425.7,0.00000000]]}}
+{"e":"md_update","data":{"id":346224385,"pair":"BTC:EUR","time":1592818381352,"bids":[],"asks":[[8420.3,0.00000000]]}}
+{"e":"md_update","data":{"id":346224386,"pair":"BTC:EUR","time":1592818381352,"bids":[[8390.3,0.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224387,"pair":"BTC:EUR","time":1592818381354,"bids":[[8390.4,0.80000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224388,"pair":"BTC:EUR","time":1592818381377,"bids":[[8385.7,0.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224389,"pair":"BTC:EUR","time":1592818381399,"bids":[[8389.8,1.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224390,"pair":"BTC:EUR","time":1592818381400,"bids":[],"asks":[[8429.8,1.00000000]]}}
+{"e":"md_update","data":{"id":346224391,"pair":"BTC:EUR","time":1592818381434,"bids":[[8390.4,0.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224392,"pair":"BTC:EUR","time":1592818381455,"bids":[[8385.8,1.10000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224393,"pair":"BTC:EUR","time":1592818381467,"bids":[],"asks":[[8418.1,0.10000000]]}}
+{"e":"md_update","data":{"id":346224394,"pair":"BTC:EUR","time":1592818381476,"bids":[[8388.1,0.10000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224395,"pair":"BTC:EUR","time":1592818381488,"bids":[[8376.4,0.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224396,"pair":"BTC:EUR","time":1592818381544,"bids":[],"asks":[[8423.7,2.00000000]]}}
+{"e":"md_update","data":{"id":346224397,"pair":"BTC:EUR","time":1592818381562,"bids":[[8243.4,0.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224398,"pair":"BTC:EUR","time":1592818381562,"bids":[],"asks":[[8543.4,0.00000000]]}}
+{"e":"md_update","data":{"id":346224399,"pair":"BTC:EUR","time":1592818381596,"bids":[[8383.7,2.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224400,"pair":"BTC:EUR","time":1592818381608,"bids":[[8385.8,0.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224401,"pair":"BTC:EUR","time":1592818381655,"bids":[[8389.9,0.80000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224402,"pair":"BTC:EUR","time":1592818381707,"bids":[[8376.4,0.30000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224403,"pair":"BTC:EUR","time":1592818381748,"bids":[[8241.4,15.00000000]],"asks":[]}}
+{"e":"md_update","data":{"id":346224405,"pair":"BTC:EUR","time":1592818381881,"bids":[],"asks":[[8541.4,15.00000000]]}}
