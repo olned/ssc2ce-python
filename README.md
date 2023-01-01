@@ -96,20 +96,15 @@ except KeyboardInterrupt:
 ```
 ## Run examples from a clone
 
-If you clone repository you can run examples from the root directory.
+If you clone repository you can run examples in docker container.
 
 ```bash
-PYTHONPATH=.:$PYTHONPATH python examples/bitfinex/bitfinex_basic_example.py
+make run cmd='python examples/bitfinex/bitfinex_basic_example.py'
 ```
 
-To run some examples, you may need additional modules, you can install them from the `requirements.txt` file.
+
+To run the private.py example, you must create and fill in the .env file, look at .env.example
 
 ```bash
-pip install -r requirements.txt
-```
-
-To run the private.py example, you must either fill in the .env file, look at .env.example, or set the environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET. 
-
-```bash
-PYTHONPATH=.:$PYTHONPATH DERIBIT_CLIENT_ID=YOU_ACCESS_KEY DERIBIT_CLIENT_SECRET=YOU_ACCESS_SECRET python examples/deribit/deribit_private.py
+make run cmd='python examples/deribit/deribit_private.py'
 ```

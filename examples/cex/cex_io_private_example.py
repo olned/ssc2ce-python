@@ -5,13 +5,10 @@ import os
 
 import aiohttp
 from ssc2ce import Cex
-from dotenv import load_dotenv
+
 
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
 logger = logging.getLogger("bitfinex-basic-example")
-
-env_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(env_path)
 
 auth_param = dict(apiKey=os.environ.get('CEX_API_KEY'),
                   secret=os.environ.get('CEX_SECRET'),
