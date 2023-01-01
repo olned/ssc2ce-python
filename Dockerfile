@@ -12,6 +12,8 @@ RUN apt-get -y clean
 
 RUN pip install --upgrade pip
 RUN pip install -U pip setuptools
+RUN pip install --upgrade build
+RUN pip install --upgrade twine
 
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt

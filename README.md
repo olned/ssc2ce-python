@@ -99,12 +99,12 @@ except KeyboardInterrupt:
 If you clone repository you can run examples in docker container.
 
 ```bash
-make run cmd='python src/examples/bitfinex/bitfinex_basic_example.py'
+make run cmd='python examples/bitfinex/bitfinex_basic_example.py'
 ```
 
 
 To run the private.py example, you must create and fill in the .env file, look at .env.example
 
 ```bash
-make run cmd='python src/examples/deribit/deribit_private.py'
+make run cmd='python examples/deribit/deribit_private.py'
 ```
