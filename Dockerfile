@@ -1,4 +1,4 @@
-FROM python:3.8-slim as python-base
+FROM python:3.8-slim
 
 RUN apt-get update
 RUN apt-get install -y ca-certificates
@@ -16,8 +16,6 @@ RUN pip install -U pip setuptools
 COPY ./requirements.txt .
 RUN pip install -r requirements.txt
 
-
-FROM python-base AS python-dev
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE=1
