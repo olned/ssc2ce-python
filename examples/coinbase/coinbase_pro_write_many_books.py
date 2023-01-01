@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import asyncio
 import logging
+import os
 from ssc2ce import Coinbase
 
 conn = Coinbase(sandbox=False)
@@ -23,8 +24,8 @@ async def subscribe_books():
         ]
     })
 
-
-output = open("coinbase_dump.jsonl", "w")
+os.makedirs("DATA", exist_ok=True) 
+output = open(os.path.join("DATA", "coinbase_dump.jsonl"), "w")
 
 
 def dump(msg: str):

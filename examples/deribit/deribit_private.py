@@ -6,7 +6,6 @@ import os
 import re
 from uuid import uuid4
 from typing import Pattern
-from dotenv import load_dotenv
 from ssc2ce import Deribit, AuthType
 
 
@@ -17,9 +16,6 @@ class MyApp:
         self.logger = logging.getLogger("deribit-private")
         self.direct_requests = {}
 
-        dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
-        load_dotenv(dotenv_path)
-
         client_id = os.environ.get('DERIBIT_CLIENT_ID')
         client_secret = os.environ.get('DERIBIT_CLIENT_SECRET')
 
@@ -28,10 +24,13 @@ class MyApp:
                 "Please setup environment variables DERIBIT_CLIENT_ID and DERIBIT_CLIENT_SECRET")
             exit(0)
 
+        testnet = os.getenv("SANDBOX", 'True').lower() not in ('false', '0', 'f')
+
         self.deribit = Deribit(client_id=client_id,
                                client_secret=client_secret,
                                auth_type=AuthType.CREDENTIALS,
                                scope=None,
+                               testnet=testnet,
                                get_id=lambda: str(uuid4()))
 
         self.deribit.on_handle_response = self.on_handle_response

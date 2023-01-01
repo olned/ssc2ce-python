@@ -1,0 +1,11 @@
+services:
+  ssc2ce:
+    image: ssc2cepython
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    command: bash -c "while true; do sleep 300; done"
+    env_file:
+      - .env
+    volumes:
+      - ./:/workspace:cached

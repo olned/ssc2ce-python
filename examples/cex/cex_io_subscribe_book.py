@@ -36,7 +36,8 @@ async def subscribe():
         await conn.ws.send_json(request)
 
 
-output = open("cex_dump_1h.jsonl", "w")
+os.makedirs("DATA", exist_ok=True) 
+output = open(os.path.join("DATA", "cex_dump_1h.jsonl"), "w")
 
 
 def dump(msg: str):

@@ -3,27 +3,24 @@ import asyncio
 import logging
 import os
 
-from dotenv import load_dotenv
 from ssc2ce import Coinbase
 
 logging.basicConfig(format='%(asctime)s %(name)s %(funcName)s %(levelname)s %(message)s', level=logging.INFO)
 logger = logging.getLogger("bitfinex-basic-example")
 
-env_path = os.path.join(os.path.dirname(__file__), '.env')
-load_dotenv(env_path)
 
 auth_param = dict(api_key=os.environ.get('COINBASE_PRO_KEY'),
                   secret_key=os.environ.get('COINBASE_PRO_SECRET'),
                   passphrase=os.environ.get('COINBASE_PRO_PASSPHRASE'))
 
-print(auth_param)
-
 
 def handle_message(message: str):
     logger.info(message)
 
+sandbox=os.getenv("SANDBOX", 'True').lower() not in ('false', '0', 'f')
+logger.info('sandbox:%s', str(sandbox))
 
-conn = Coinbase(auth_param=auth_param)
+conn = Coinbase(auth_param=auth_param, sandbox=sandbox)
 conn.on_message = handle_message
 
 
